@@ -1,6 +1,6 @@
 // `type` is cubiomes' StructureType; 100 = strongholds (handled specially).
-// `dim` is the dimension the structure generates in (0 = Overworld, -1 = Nether); defaults to 0.
-export type StructureDef = { type: number; key: string; name: string; icon: string; color: string; dim?: -1 | 0 };
+// `dim` is the dimension the structure generates in (0 = Overworld, -1 = Nether, 1 = End); defaults to 0.
+export type StructureDef = { type: number; key: string; name: string; icon: string; color: string; dim?: -1 | 0 | 1 };
 export const STRUCTURES: StructureDef[] = [
   { type: 5, key: 'village', name: 'Village', icon: 'V', color: '#c97b2a' },
   { type: 10, key: 'outpost', name: 'Pillager Outpost', icon: 'O', color: '#7a3b3b' },
@@ -23,4 +23,7 @@ export const STRUCTURES: StructureDef[] = [
   { type: 14, key: 'treasure', name: 'Buried Treasure', icon: 'X', color: '#d4af37' },
   { type: 15, key: 'mineshaft', name: 'Mineshaft', icon: 'm', color: '#777' },
   { type: 16, key: 'desert_well', name: 'Desert Well', icon: 'w', color: '#6aa' },
+  { type: 20, key: 'end_city', name: 'End City', icon: 'C', color: '#c9a876', dim: 1 },
+  { type: 21, key: 'end_gateway', name: 'End Gateway', icon: 'G', color: '#2bd9c4', dim: 1 },
+  { type: 22, key: 'end_island', name: 'End Island', icon: 'Ei', color: '#f0f0ff', dim: 1 },
 ];

@@ -1,6 +1,6 @@
 // Biome ids follow cubiomes' BiomeID enum. Colors are [r,g,b].
-// `dim` is the dimension the biome generates in (0 = Overworld, -1 = Nether).
-export type Biome = { id: number; name: string; color: [number, number, number]; dim: -1 | 0 };
+// `dim` is the dimension the biome generates in (0 = Overworld, -1 = Nether, 1 = End).
+export type Biome = { id: number; name: string; color: [number, number, number]; dim: -1 | 0 | 1 };
 
 const raw: [number, string, string][] = [
   [0, 'Ocean', '#000070'], [1, 'Plains', '#8db360'], [2, 'Desert', '#fa9418'], [3, 'Windswept Hills', '#606060'],
@@ -35,13 +35,18 @@ const raw: [number, string, string][] = [
   // Nether
   [8, 'Nether Wastes', '#572526'], [170, 'Soul Sand Valley', '#4d3a2e'], [171, 'Crimson Forest', '#981a11'],
   [172, 'Warped Forest', '#49907b'], [173, 'Basalt Deltas', '#645f63'],
+  // End
+  [9, 'The End', '#8080ff'], [40, 'Small End Islands', '#4b4bab'], [41, 'End Midlands', '#c9c959'],
+  [42, 'End Highlands', '#b5b536'], [43, 'End Barrens', '#7070cc'],
 ];
 
 const hex = (h: string): [number, number, number] =>
   [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
 const NETHER_IDS = new Set([8, 170, 171, 172, 173]);
-export const BIOMES: Biome[] = raw.map(([id, name, c]) => ({ id, name, color: hex(c), dim: NETHER_IDS.has(id) ? -1 : 0 }));
+const END_IDS = new Set([9, 40, 41, 42, 43]);
+const dimOf = (id: number): -1 | 0 | 1 => (NETHER_IDS.has(id) ? -1 : END_IDS.has(id) ? 1 : 0);
+export const BIOMES: Biome[] = raw.map(([id, name, c]) => ({ id, name, color: hex(c), dim: dimOf(id) }));
 export const BIOME_BY_ID = new Map(BIOMES.map((b) => [b.id, b]));
 export const biomeName = (id: number) => BIOME_BY_ID.get(id)?.name ?? `Biome ${id}`;
 

@@ -15,7 +15,7 @@
         <label>Edition <select id="edition"><option value="java">Java</option><option value="bedrock">Bedrock</option></select></label>
         <label>Version <select id="version"></select></label>
       </div>
-      <label>Dimension <select id="dimension"><option value="overworld">Overworld</option><option value="nether">Nether</option></select></label>
+      <label>Dimension <select id="dimension"><option value="overworld">Overworld</option><option value="nether">Nether</option><option value="end">End</option></select></label>
       <label class="check"><input type="checkbox" id="large" /> Large biomes</label>
       <div class="row"><button type="submit">Generate</button><button type="button" id="save" class="alt">Save seed</button></div>
       <p id="note" class="note" hidden>Bedrock uses the nearest Java generator: biomes and structure positions are approximate.</p>
@@ -24,6 +24,7 @@
     <details open><summary>Structures</summary>
       <div class="filterGroup"><h4>Overworld</h4><div id="structsOverworld"></div></div>
       <div class="filterGroup"><h4>Nether</h4><div id="structsNether"></div></div>
+      <div class="filterGroup"><h4>End</h4><div id="structsEnd"></div></div>
     </details>
     <details><summary>Biome filter</summary>
       <div class="row"><button type="button" id="biomeClear" class="alt">Clear</button></div>
@@ -31,6 +32,7 @@
       <div id="biomes">
         <div class="filterGroup"><h4>Overworld</h4><div id="biomesOverworld"></div></div>
         <div class="filterGroup"><h4>Nether</h4><div id="biomesNether"></div></div>
+        <div class="filterGroup"><h4>End</h4><div id="biomesEnd"></div></div>
       </div>
     </details>
   </aside>

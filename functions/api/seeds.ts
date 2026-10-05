@@ -18,7 +18,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     seed: b.seed.trim().slice(0, 100),
     edition: b.edition === 'bedrock' ? 'bedrock' : 'java',
     version: b.version.slice(0, 40),
-    dimension: b.dimension === 'nether' ? 'nether' : 'overworld',
+    dimension: b.dimension === 'nether' ? 'nether' : b.dimension === 'end' ? 'end' : 'overworld',
     notes: String(b.notes ?? '').slice(0, 1000),
     created_at: Date.now(),
   };

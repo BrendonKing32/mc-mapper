@@ -12,6 +12,9 @@ const map = new MapView($('map') as HTMLCanvasElement);
 const seedIn = $<HTMLInputElement>('seed'), edIn = $<HTMLSelectElement>('edition'), verIn = $<HTMLSelectElement>('version');
 const largeIn = $<HTMLInputElement>('large');
 const dimIn = $<HTMLSelectElement>('dimension');
+type DimName = 'overworld' | 'nether' | 'end';
+const DIM_OF: Record<DimName, -1 | 0 | 1> = { overworld: 0, nether: -1, end: 1 };
+const dimName = (d: unknown): DimName => (d === 'nether' || d === 'end' ? d : 'overworld');
 
 function fillVersions(selected?: string) {
   const vs = versionsFor(edIn.value as Edition);
@@ -26,8 +29,7 @@ function generate() {
   const edition = edIn.value as Edition;
   const mc = versionsFor(edition).find((v) => v.label === verIn.value)!.mc;
   const { lo, hi } = seedParts(parseSeed(seedIn.value, edition));
-  const dim = dimIn.value === 'nether' ? -1 : 0;
-  map.setWorld(mc, lo, hi, largeIn.checked, dim);
+  map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[dimName(dimIn.value)]);
   const q = new URLSearchParams({ seed: seedIn.value, edition, version: verIn.value, dimension: dimIn.value });
   history.replaceState(null, '', `?${q}`);
 }
@@ -46,7 +48,8 @@ function savedRow(s: SavedSeed) {
   const li = document.createElement('li');
   li.innerHTML = `<div class="meta"><b></b><small></small></div><button title="Rename">✎</button><button title="Delete">✕</button>`;
   li.querySelector('b')!.textContent = s.name;
-  li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${s.dimension === 'nether' ? ' · Nether' : ''}`;
+  const dimLabel = s.dimension === 'nether' ? ' · Nether' : s.dimension === 'end' ? ' · End' : '';
+  li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${dimLabel}`;
   li.onclick = () => load(s);
   const [ren, del] = li.querySelectorAll('button');
   ren.onclick = async (e) => {
@@ -62,7 +65,7 @@ function savedRow(s: SavedSeed) {
 }
 function load(s: { seed: string; edition: Edition; version: string; dimension?: string }) {
   seedIn.value = s.seed; edIn.value = s.edition; fillVersions(s.version);
-  dimIn.value = s.dimension === 'nether' ? 'nether' : 'overworld';
+  dimIn.value = dimName(s.dimension);
   updateDimStyling();
   generate();
 }
@@ -70,13 +73,15 @@ $('save').onclick = async () => {
   if (!seedIn.value.trim()) return;
   const name = prompt('Name for this seed', seedIn.value.trim());
   if (name === null) return;
-  await seedsApi.add({ name: name.trim() || seedIn.value.trim(), seed: seedIn.value.trim(), edition: edIn.value as Edition, version: verIn.value, dimension: dimIn.value as 'overworld' | 'nether', notes: '' });
+  await seedsApi.add({ name: name.trim() || seedIn.value.trim(), seed: seedIn.value.trim(), edition: edIn.value as Edition, version: verIn.value, dimension: dimName(dimIn.value), notes: '' });
   refreshSaved();
 };
 
 // --- structure + biome filters ---
-const structOn = new Set([...STRUCTURES.slice(0, 5), ...STRUCTURES.filter((s) => s.key === 'fortress' || s.key === 'bastion')].map((s) => s.type));
-const overworldEl = $('structsOverworld'), netherEl = $('structsNether');
+const DEFAULT_ON_KEYS = new Set(['village', 'outpost', 'mansion', 'monument', 'stronghold', 'fortress', 'bastion', 'end_city']);
+const structOn = new Set(STRUCTURES.filter((s) => DEFAULT_ON_KEYS.has(s.key)).map((s) => s.type));
+const structEls: Record<DimName, HTMLElement> = { overworld: $('structsOverworld'), nether: $('structsNether'), end: $('structsEnd') };
+const dimNameOf = (d: -1 | 0 | 1 | undefined): DimName => (d === -1 ? 'nether' : d === 1 ? 'end' : 'overworld');
 const structRows = STRUCTURES.map((s) => {
   const l = document.createElement('label');
   l.className = 'opt';
@@ -86,14 +91,14 @@ const structRows = STRUCTURES.map((s) => {
     (e.target as HTMLInputElement).checked ? structOn.add(s.type) : structOn.delete(s.type);
     map.setStructures(new Set(structOn));
   };
-  (s.dim === -1 ? netherEl : overworldEl).append(l);
+  structEls[dimNameOf(s.dim)].append(l);
   return l;
 });
 map.setStructures(new Set(structOn));
 
 const biomeOn = new Set<number>();
 const biomeEl = $('biomes');
-const biomesOverworldEl = $('biomesOverworld'), biomesNetherEl = $('biomesNether');
+const biomeEls: Record<DimName, HTMLElement> = { overworld: $('biomesOverworld'), nether: $('biomesNether'), end: $('biomesEnd') };
 const biomeRows = BIOMES.map((b) => {
   const l = document.createElement('label');
   l.className = 'opt';
@@ -104,7 +109,7 @@ const biomeRows = BIOMES.map((b) => {
     (e.target as HTMLInputElement).checked ? biomeOn.add(b.id) : biomeOn.delete(b.id);
     map.setBiomeFilter(new Set(biomeOn));
   };
-  (b.dim === -1 ? biomesNetherEl : biomesOverworldEl).append(l);
+  biomeEls[dimNameOf(b.dim)].append(l);
   return l;
 });
 $<HTMLInputElement>('biomeSearch').oninput = (e) => {
@@ -118,7 +123,7 @@ $('biomeClear').onclick = () => {
 };
 
 function updateDimStyling() {
-  const dim = dimIn.value === 'nether' ? '-1' : '0';
+  const dim = String(DIM_OF[dimName(dimIn.value)]);
   for (const r of [...structRows, ...biomeRows]) r.classList.toggle('otherDim', r.dataset.dim !== dim);
 }
 updateDimStyling();
