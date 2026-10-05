@@ -7,13 +7,16 @@
 static Generator g;
 static int g_mc;
 static uint64_t g_seed;
+static int g_dim;
 
-void mc_init(int mc, uint32_t seed_lo, uint32_t seed_hi, int large)
+// dim: 0 = Overworld, -1 = Nether, +1 = End (see biomes.h DIM_*).
+void mc_init(int mc, uint32_t seed_lo, uint32_t seed_hi, int large, int dim)
 {
     g_mc = mc;
     g_seed = ((uint64_t)seed_hi << 32) | seed_lo;
+    g_dim = dim;
     setupGenerator(&g, mc, large ? LARGE_BIOMES : 0);
-    applySeed(&g, DIM_OVERWORLD, g_seed);
+    applySeed(&g, dim, g_seed);
 }
 
 // Generates w*h biome ids at 1:scale; returns malloc'd int buffer (free with mc_free).
@@ -35,7 +38,7 @@ int mc_biome_at(int x, int z)
 int mc_structures(int type, int x0, int z0, int x1, int z1, int *out, int max)
 {
     StructureConfig sc;
-    if (!getStructureConfig(type, g_mc, &sc) || sc.dim != DIM_OVERWORLD) return -1;
+    if (!getStructureConfig(type, g_mc, &sc) || sc.dim != g_dim) return -1;
     int regBlocks = sc.regionSize * 16;
     int rx0 = (int)((x0 < 0 ? x0 - regBlocks + 1 : x0) / regBlocks) - 1;
     int rz0 = (int)((z0 < 0 ? z0 - regBlocks + 1 : z0) / regBlocks) - 1;

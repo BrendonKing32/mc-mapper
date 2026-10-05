@@ -27,6 +27,7 @@ export class MapView {
   private structKey = '';
   private structTimer = 0;
   private spawn: { x: number; z: number } | null = null;
+  private ready = false; // true once the generator has initialized (spawn itself may be null, e.g. in the Nether)
   private raf = 0;
   private selected: Found | null = null;
   onHover: (x: number, z: number, biome: string) => void = () => {};
@@ -42,16 +43,17 @@ export class MapView {
     this.resize();
   }
 
-  setWorld(mc: number, lo: number, hi: number, large = false) {
+  setWorld(mc: number, lo: number, hi: number, large = false, dim = 0) {
     this.gen++;
     this.tiles.clear();
     this.pending.clear();
     this.found = [];
     this.structKey = '';
     this.spawn = null;
+    this.ready = false;
     this.selected = null;
-    this.worker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large });
-    this.structWorker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, quiet: true });
+    this.worker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim });
+    this.structWorker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim, quiet: true });
     this.onStatus('Generating…');
     this.cx = 0; this.cz = 0;
   }
@@ -85,7 +87,9 @@ export class MapView {
       this.onStatus('Generation failed: ' + m.message);
     } else if (m.op === 'ready') {
       this.spawn = m.spawn;
-      this.goTo(m.spawn.x, m.spawn.z);
+      this.ready = true;
+      if (m.spawn) this.goTo(m.spawn.x, m.spawn.z);
+      else { this.queueStructures(); this.schedule(); }
       this.onStatus('');
     } else if (m.op === 'tile') {
       this.pending.delete(m.key);
@@ -209,7 +213,7 @@ export class MapView {
       const types = [...this.enabled];
       const [x0, z0] = this.toWorld(0, 0);
       const [x1, z1] = this.toWorld(this.cssW, this.cssH);
-      if (!types.length || !this.spawn) { this.found = []; this.onStatus(this.spawn ? '' : this.pendingStatus()); return this.schedule(); }
+      if (!types.length || !this.ready) { this.found = []; this.onStatus(this.ready ? '' : this.pendingStatus()); return this.schedule(); }
       if (x1 - x0 > MAX_STRUCT_SPAN) { this.found = []; this.onStatus('Zoom in to see structures'); return this.schedule(); }
       this.onStatus('');
       const pad = (x1 - x0) * 0.25;

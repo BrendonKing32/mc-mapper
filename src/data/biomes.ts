@@ -31,6 +31,9 @@ const raw: [number, string, string][] = [
   [180, 'Jagged Peaks', '#dcdcc8'], [181, 'Frozen Peaks', '#b0b3ce'], [182, 'Stony Peaks', '#7b8f74'],
   [183, 'Deep Dark', '#0a2230'], [184, 'Mangrove Swamp', '#67352b'], [185, 'Cherry Grove', '#f5a3c7'],
   [186, 'Pale Garden', '#b8bfb2'],
+  // Nether
+  [8, 'Nether Wastes', '#572526'], [170, 'Soul Sand Valley', '#4d3a2e'], [171, 'Crimson Forest', '#981a11'],
+  [172, 'Warped Forest', '#49907b'], [173, 'Basalt Deltas', '#645f63'],
 ];
 
 const hex = (h: string): [number, number, number] =>
