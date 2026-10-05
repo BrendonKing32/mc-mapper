@@ -11,6 +11,7 @@ const map = new MapView($('map') as HTMLCanvasElement);
 
 const seedIn = $<HTMLInputElement>('seed'), edIn = $<HTMLSelectElement>('edition'), verIn = $<HTMLSelectElement>('version');
 const largeIn = $<HTMLInputElement>('large');
+const dimIn = $<HTMLSelectElement>('dimension');
 
 function fillVersions(selected?: string) {
   const vs = versionsFor(edIn.value as Edition);
@@ -25,11 +26,13 @@ function generate() {
   const edition = edIn.value as Edition;
   const mc = versionsFor(edition).find((v) => v.label === verIn.value)!.mc;
   const { lo, hi } = seedParts(parseSeed(seedIn.value, edition));
-  map.setWorld(mc, lo, hi, largeIn.checked);
-  const q = new URLSearchParams({ seed: seedIn.value, edition, version: verIn.value });
+  const dim = dimIn.value === 'nether' ? -1 : 0;
+  map.setWorld(mc, lo, hi, largeIn.checked, dim);
+  const q = new URLSearchParams({ seed: seedIn.value, edition, version: verIn.value, dimension: dimIn.value });
   history.replaceState(null, '', `?${q}`);
 }
 $('seedForm').onsubmit = (e) => { e.preventDefault(); generate(); };
+dimIn.onchange = () => filterStructsByDim();
 
 // --- saved seeds ---
 const savedEl = $('saved');
@@ -43,7 +46,7 @@ function savedRow(s: SavedSeed) {
   const li = document.createElement('li');
   li.innerHTML = `<div class="meta"><b></b><small></small></div><button title="Rename">✎</button><button title="Delete">✕</button>`;
   li.querySelector('b')!.textContent = s.name;
-  li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}`;
+  li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${s.dimension === 'nether' ? ' · Nether' : ''}`;
   li.onclick = () => load(s);
   const [ren, del] = li.querySelectorAll('button');
   ren.onclick = async (e) => {
@@ -57,32 +60,41 @@ function savedRow(s: SavedSeed) {
   };
   return li;
 }
-function load(s: { seed: string; edition: Edition; version: string }) {
+function load(s: { seed: string; edition: Edition; version: string; dimension?: string }) {
   seedIn.value = s.seed; edIn.value = s.edition; fillVersions(s.version);
+  dimIn.value = s.dimension === 'nether' ? 'nether' : 'overworld';
+  filterStructsByDim();
   generate();
 }
 $('save').onclick = async () => {
   if (!seedIn.value.trim()) return;
   const name = prompt('Name for this seed', seedIn.value.trim());
   if (name === null) return;
-  await seedsApi.add({ name: name.trim() || seedIn.value.trim(), seed: seedIn.value.trim(), edition: edIn.value as Edition, version: verIn.value, notes: '' });
+  await seedsApi.add({ name: name.trim() || seedIn.value.trim(), seed: seedIn.value.trim(), edition: edIn.value as Edition, version: verIn.value, dimension: dimIn.value as 'overworld' | 'nether', notes: '' });
   refreshSaved();
 };
 
 // --- structure + biome filters ---
 const structEl = $('structs');
-const structOn = new Set(STRUCTURES.slice(0, 5).map((s) => s.type));
-for (const s of STRUCTURES) {
+const structOn = new Set([...STRUCTURES.slice(0, 5), ...STRUCTURES.filter((s) => s.key === 'fortress' || s.key === 'bastion')].map((s) => s.type));
+const structRows = STRUCTURES.map((s) => {
   const l = document.createElement('label');
   l.className = 'opt';
+  l.dataset.dim = String(s.dim ?? 0);
   l.innerHTML = `<input type="checkbox" ${structOn.has(s.type) ? 'checked' : ''}><i style="background:${s.color}"></i>${s.name}`;
   l.querySelector('input')!.onchange = (e) => {
     (e.target as HTMLInputElement).checked ? structOn.add(s.type) : structOn.delete(s.type);
     map.setStructures(new Set(structOn));
   };
   structEl.append(l);
-}
+  return l;
+});
 map.setStructures(new Set(structOn));
+function filterStructsByDim() {
+  const dim = dimIn.value === 'nether' ? '-1' : '0';
+  for (const r of structRows) r.hidden = r.dataset.dim !== dim;
+}
+filterStructsByDim();
 
 const biomeOn = new Set<number>();
 const biomeEl = $('biomes');
@@ -129,4 +141,4 @@ $('spawn').onclick = () => map.goToSpawn();
 // --- boot: seed from URL, else first saved ---
 refreshSaved();
 const q = new URLSearchParams(location.search);
-if (q.get('seed')) load({ seed: q.get('seed')!, edition: (q.get('edition') as Edition) || 'java', version: q.get('version') || '' });
+if (q.get('seed')) load({ seed: q.get('seed')!, edition: (q.get('edition') as Edition) || 'java', version: q.get('version') || '', dimension: q.get('dimension') || '' });

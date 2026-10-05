@@ -1,5 +1,6 @@
 // `type` is cubiomes' StructureType; 100 = strongholds (handled specially).
-export type StructureDef = { type: number; key: string; name: string; icon: string; color: string };
+// `dim` is the dimension the structure generates in (0 = Overworld, -1 = Nether); defaults to 0.
+export type StructureDef = { type: number; key: string; name: string; icon: string; color: string; dim?: -1 | 0 };
 export const STRUCTURES: StructureDef[] = [
   { type: 5, key: 'village', name: 'Village', icon: 'V', color: '#c97b2a' },
   { type: 10, key: 'outpost', name: 'Pillager Outpost', icon: 'O', color: '#7a3b3b' },
@@ -13,7 +14,10 @@ export const STRUCTURES: StructureDef[] = [
   { type: 2, key: 'jungle_temple', name: 'Jungle Temple', icon: 'J', color: '#3d8a3d' },
   { type: 3, key: 'swamp_hut', name: 'Swamp Hut', icon: 'H', color: '#4d6b3a' },
   { type: 4, key: 'igloo', name: 'Igloo', icon: 'I', color: '#9ad' },
+  { type: 18, key: 'fortress', name: 'Nether Fortress', icon: 'F', color: '#9a2a2a', dim: -1 },
+  { type: 19, key: 'bastion', name: 'Bastion Remnant', icon: 'B', color: '#4a3b2a', dim: -1 },
   { type: 11, key: 'ruined_portal', name: 'Ruined Portal', icon: 'P', color: '#8a2be2' },
+  { type: 12, key: 'ruined_portal_n', name: 'Ruined Portal (Nether)', icon: 'P', color: '#b06bff', dim: -1 },
   { type: 7, key: 'shipwreck', name: 'Shipwreck', icon: 'Sh', color: '#6b4b2a' },
   { type: 6, key: 'ocean_ruin', name: 'Ocean Ruin', icon: 'Or', color: '#4a7a8a' },
   { type: 14, key: 'treasure', name: 'Buried Treasure', icon: 'X', color: '#d4af37' },
