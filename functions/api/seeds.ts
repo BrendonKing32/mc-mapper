@@ -18,11 +18,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     seed: b.seed.trim().slice(0, 100),
     edition: b.edition === 'bedrock' ? 'bedrock' : 'java',
     version: b.version.slice(0, 40),
+    dimension: b.dimension === 'nether' ? 'nether' : 'overworld',
     notes: String(b.notes ?? '').slice(0, 1000),
     created_at: Date.now(),
   };
   await env.DB.prepare(
-    'INSERT INTO seeds (id,name,seed,edition,version,notes,created_at) VALUES (?,?,?,?,?,?,?)',
-  ).bind(row.id, row.name, row.seed, row.edition, row.version, row.notes, row.created_at).run();
+    'INSERT INTO seeds (id,name,seed,edition,version,dimension,notes,created_at) VALUES (?,?,?,?,?,?,?,?)',
+  ).bind(row.id, row.name, row.seed, row.edition, row.version, row.dimension, row.notes, row.created_at).run();
   return json(row, 201);
 };

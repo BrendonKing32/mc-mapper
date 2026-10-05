@@ -1,6 +1,6 @@
 import type { Edition } from './data/versions';
 
-export type SavedSeed = { id: string; name: string; seed: string; edition: Edition; version: string; notes: string; created_at: number };
+export type SavedSeed = { id: string; name: string; seed: string; edition: Edition; version: string; dimension: 'overworld' | 'nether'; notes: string; created_at: number };
 
 const LS = 'mc-mapper:seeds';
 const local = (): SavedSeed[] => { try { return JSON.parse(localStorage.getItem(LS) || '[]'); } catch { return []; } };
