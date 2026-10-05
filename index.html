@@ -21,7 +21,10 @@
       <p id="note" class="note" hidden>Bedrock uses the nearest Java generator: biomes and structure positions are approximate.</p>
     </form>
     <details open><summary>Saved seeds</summary><ul id="saved"></ul></details>
-    <details open><summary>Structures</summary><div id="structs"></div></details>
+    <details open><summary>Structures</summary>
+      <div class="structGroup"><h4>Overworld</h4><div id="structsOverworld"></div></div>
+      <div class="structGroup"><h4>Nether</h4><div id="structsNether"></div></div>
+    </details>
     <details><summary>Biome filter</summary>
       <div class="row"><button type="button" id="biomeClear" class="alt">Clear</button></div>
       <input id="biomeSearch" placeholder="search biomes" />

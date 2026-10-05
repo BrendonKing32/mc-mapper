@@ -17,6 +17,9 @@ details { margin-top:14px; } summary { cursor:pointer; font-weight:600; margin-b
 #saved small { color:var(--muted); } #saved button { flex:none; padding:2px 7px; background:transparent; color:var(--muted); }
 .opt { display:flex; align-items:center; gap:7px; padding:2px 0; font-size:13px; color:var(--text); }
 .opt i { width:12px; height:12px; border-radius:3px; display:inline-block; border:1px solid #0006; flex:none; }
+.opt.otherDim { opacity:.4; }
+.structGroup h4 { margin:8px 0 3px; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; }
+.structGroup:first-of-type h4 { margin-top:0; }
 #biomes { max-height:300px; overflow-y:auto; margin-top:6px; }
 main { flex:1; position:relative; min-width:0; }
 #map { display:block; cursor:grab; touch-action:none; } #map:active { cursor:grabbing; }

@@ -75,8 +75,8 @@ $('save').onclick = async () => {
 };
 
 // --- structure + biome filters ---
-const structEl = $('structs');
 const structOn = new Set([...STRUCTURES.slice(0, 5), ...STRUCTURES.filter((s) => s.key === 'fortress' || s.key === 'bastion')].map((s) => s.type));
+const overworldEl = $('structsOverworld'), netherEl = $('structsNether');
 const structRows = STRUCTURES.map((s) => {
   const l = document.createElement('label');
   l.className = 'opt';
@@ -86,13 +86,13 @@ const structRows = STRUCTURES.map((s) => {
     (e.target as HTMLInputElement).checked ? structOn.add(s.type) : structOn.delete(s.type);
     map.setStructures(new Set(structOn));
   };
-  structEl.append(l);
+  (s.dim === -1 ? netherEl : overworldEl).append(l);
   return l;
 });
 map.setStructures(new Set(structOn));
 function filterStructsByDim() {
   const dim = dimIn.value === 'nether' ? '-1' : '0';
-  for (const r of structRows) r.hidden = r.dataset.dim !== dim;
+  for (const r of structRows) r.classList.toggle('otherDim', r.dataset.dim !== dim);
 }
 filterStructsByDim();
 
