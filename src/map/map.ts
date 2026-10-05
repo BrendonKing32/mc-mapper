@@ -193,17 +193,19 @@ export class MapView {
       ctx.fillStyle = '#ff3b3b'; ctx.beginPath(); ctx.arc(sx, sz, 5, 0, 7); ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.stroke();
     }
-    ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const f of this.found) {
       if (!this.enabled.has(f.type)) continue;
       const def = STRUCTURES.find((s) => s.type === f.type)!;
       const [sx, sz] = this.toScreen(f.x, f.z);
       if (sx < -20 || sz < -20 || sx > this.cssW + 20 || sz > this.cssH + 20) continue;
       const sel = this.selected === f;
-      ctx.beginPath(); ctx.arc(sx, sz, sel ? 12 : 9, 0, 7);
+      const r = sel ? 13 : 10;
+      ctx.beginPath(); ctx.arc(sx, sz, r, 0, 7);
       ctx.fillStyle = def.color; ctx.fill();
       ctx.lineWidth = sel ? 3 : 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.fillText(def.icon, sx, sz + 0.5);
+      ctx.font = `${r * 1.3}px system-ui`;
+      ctx.fillText(def.icon, sx, sz + 0.5);
     }
   }
 

@@ -86,7 +86,7 @@ const structRows = STRUCTURES.map((s) => {
   const l = document.createElement('label');
   l.className = 'opt';
   l.dataset.dim = String(s.dim ?? 0);
-  l.innerHTML = `<input type="checkbox" ${structOn.has(s.type) ? 'checked' : ''}><i style="background:${s.color}"></i>${s.name}`;
+  l.innerHTML = `<input type="checkbox" ${structOn.has(s.type) ? 'checked' : ''}><i style="background:${s.color}"></i>${s.icon} ${s.name}`;
   l.querySelector('input')!.onchange = (e) => {
     (e.target as HTMLInputElement).checked ? structOn.add(s.type) : structOn.delete(s.type);
     map.setStructures(new Set(structOn));
@@ -136,7 +136,7 @@ map.onSelect = (f) => {
   el.hidden = !f;
   if (f) {
     const def = STRUCTURES.find((s) => s.type === f.type)!;
-    el.innerHTML = `<b>${def.name}</b><br>X ${f.x}, Z ${f.z}<br><code>/tp @s ${f.x} ~ ${f.z}</code>`;
+    el.innerHTML = `<b>${def.icon} ${def.name}</b><br>X ${f.x}, Z ${f.z}<br><code>/tp @s ${f.x} ~ ${f.z}</code>`;
   }
 };
 $('goto').onsubmit = (e) => {
