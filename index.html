@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MC Mapper</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <aside id="side">
+    <h1>MC Mapper</h1>
+    <form id="seedForm">
+      <label>Seed <input id="seed" placeholder="number or text" autocomplete="off" required /></label>
+      <div class="row">
+        <label>Edition <select id="edition"><option value="java">Java</option><option value="bedrock">Bedrock</option></select></label>
+        <label>Version <select id="version"></select></label>
+      </div>
+      <label class="check"><input type="checkbox" id="large" /> Large biomes</label>
+      <div class="row"><button type="submit">Generate</button><button type="button" id="save" class="alt">Save seed</button></div>
+      <p id="note" class="note" hidden>Bedrock uses the nearest Java generator: biomes and structure positions are approximate.</p>
+    </form>
+    <details open><summary>Saved seeds</summary><ul id="saved"></ul></details>
+    <details open><summary>Structures</summary><div id="structs"></div></details>
+    <details><summary>Biome filter</summary>
+      <div class="row"><button type="button" id="biomeClear" class="alt">Clear</button></div>
+      <input id="biomeSearch" placeholder="search biomes" />
+      <div id="biomes"></div>
+    </details>
+  </aside>
+  <main>
+    <canvas id="map"></canvas>
+    <div id="hud"><span id="coords">—</span><span id="status"></span></div>
+    <form id="goto"><input id="gx" placeholder="X" size="6" /><input id="gz" placeholder="Z" size="6" /><button>Go</button><button type="button" id="spawn" class="alt">Spawn</button></form>
+    <div id="pick" hidden></div>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

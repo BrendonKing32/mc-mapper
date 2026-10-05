@@ -1,0 +1,22 @@
+// `type` is cubiomes' StructureType; 100 = strongholds (handled specially).
+export type StructureDef = { type: number; key: string; name: string; icon: string; color: string };
+export const STRUCTURES: StructureDef[] = [
+  { type: 5, key: 'village', name: 'Village', icon: 'V', color: '#c97b2a' },
+  { type: 10, key: 'outpost', name: 'Pillager Outpost', icon: 'O', color: '#7a3b3b' },
+  { type: 9, key: 'mansion', name: 'Woodland Mansion', icon: 'M', color: '#5b3a1e' },
+  { type: 8, key: 'monument', name: 'Ocean Monument', icon: 'W', color: '#2aa9c9' },
+  { type: 100, key: 'stronghold', name: 'Stronghold', icon: 'S', color: '#444' },
+  { type: 13, key: 'ancient_city', name: 'Ancient City', icon: 'A', color: '#1a5260' },
+  { type: 24, key: 'trial_chambers', name: 'Trial Chambers', icon: 'T', color: '#b8742a' },
+  { type: 23, key: 'trail_ruins', name: 'Trail Ruins', icon: 'R', color: '#9a7b4f' },
+  { type: 1, key: 'desert_pyramid', name: 'Desert Pyramid', icon: 'D', color: '#d9b64a' },
+  { type: 2, key: 'jungle_temple', name: 'Jungle Temple', icon: 'J', color: '#3d8a3d' },
+  { type: 3, key: 'swamp_hut', name: 'Swamp Hut', icon: 'H', color: '#4d6b3a' },
+  { type: 4, key: 'igloo', name: 'Igloo', icon: 'I', color: '#9ad' },
+  { type: 11, key: 'ruined_portal', name: 'Ruined Portal', icon: 'P', color: '#8a2be2' },
+  { type: 7, key: 'shipwreck', name: 'Shipwreck', icon: 'Sh', color: '#6b4b2a' },
+  { type: 6, key: 'ocean_ruin', name: 'Ocean Ruin', icon: 'Or', color: '#4a7a8a' },
+  { type: 14, key: 'treasure', name: 'Buried Treasure', icon: 'X', color: '#d4af37' },
+  { type: 15, key: 'mineshaft', name: 'Mineshaft', icon: 'm', color: '#777' },
+  { type: 16, key: 'desert_well', name: 'Desert Well', icon: 'w', color: '#6aa' },
+];
