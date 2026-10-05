@@ -32,7 +32,7 @@ function generate() {
   history.replaceState(null, '', `?${q}`);
 }
 $('seedForm').onsubmit = (e) => { e.preventDefault(); generate(); };
-dimIn.onchange = () => filterStructsByDim();
+dimIn.onchange = () => updateDimStyling();
 
 // --- saved seeds ---
 const savedEl = $('saved');
@@ -63,7 +63,7 @@ function savedRow(s: SavedSeed) {
 function load(s: { seed: string; edition: Edition; version: string; dimension?: string }) {
   seedIn.value = s.seed; edIn.value = s.edition; fillVersions(s.version);
   dimIn.value = s.dimension === 'nether' ? 'nether' : 'overworld';
-  filterStructsByDim();
+  updateDimStyling();
   generate();
 }
 $('save').onclick = async () => {
@@ -90,24 +90,21 @@ const structRows = STRUCTURES.map((s) => {
   return l;
 });
 map.setStructures(new Set(structOn));
-function filterStructsByDim() {
-  const dim = dimIn.value === 'nether' ? '-1' : '0';
-  for (const r of structRows) r.classList.toggle('otherDim', r.dataset.dim !== dim);
-}
-filterStructsByDim();
 
 const biomeOn = new Set<number>();
 const biomeEl = $('biomes');
+const biomesOverworldEl = $('biomesOverworld'), biomesNetherEl = $('biomesNether');
 const biomeRows = BIOMES.map((b) => {
   const l = document.createElement('label');
   l.className = 'opt';
   l.dataset.name = b.name.toLowerCase();
+  l.dataset.dim = String(b.dim);
   l.innerHTML = `<input type="checkbox"><i style="background:rgb(${b.color})"></i>${b.name}`;
   l.querySelector('input')!.onchange = (e) => {
     (e.target as HTMLInputElement).checked ? biomeOn.add(b.id) : biomeOn.delete(b.id);
     map.setBiomeFilter(new Set(biomeOn));
   };
-  biomeEl.append(l);
+  (b.dim === -1 ? biomesNetherEl : biomesOverworldEl).append(l);
   return l;
 });
 $<HTMLInputElement>('biomeSearch').oninput = (e) => {
@@ -119,6 +116,12 @@ $('biomeClear').onclick = () => {
   biomeEl.querySelectorAll('input').forEach((i) => (i.checked = false));
   map.setBiomeFilter(new Set());
 };
+
+function updateDimStyling() {
+  const dim = dimIn.value === 'nether' ? '-1' : '0';
+  for (const r of [...structRows, ...biomeRows]) r.classList.toggle('otherDim', r.dataset.dim !== dim);
+}
+updateDimStyling();
 
 // --- HUD ---
 map.onHover = (x, z, biome) => ($('coords').textContent = `X ${x}  Z ${z}${biome ? ' · ' + biome : ''}`);

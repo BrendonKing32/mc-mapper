@@ -22,13 +22,16 @@
     </form>
     <details open><summary>Saved seeds</summary><ul id="saved"></ul></details>
     <details open><summary>Structures</summary>
-      <div class="structGroup"><h4>Overworld</h4><div id="structsOverworld"></div></div>
-      <div class="structGroup"><h4>Nether</h4><div id="structsNether"></div></div>
+      <div class="filterGroup"><h4>Overworld</h4><div id="structsOverworld"></div></div>
+      <div class="filterGroup"><h4>Nether</h4><div id="structsNether"></div></div>
     </details>
     <details><summary>Biome filter</summary>
       <div class="row"><button type="button" id="biomeClear" class="alt">Clear</button></div>
       <input id="biomeSearch" placeholder="search biomes" />
-      <div id="biomes"></div>
+      <div id="biomes">
+        <div class="filterGroup"><h4>Overworld</h4><div id="biomesOverworld"></div></div>
+        <div class="filterGroup"><h4>Nether</h4><div id="biomesNether"></div></div>
+      </div>
     </details>
   </aside>
   <main>

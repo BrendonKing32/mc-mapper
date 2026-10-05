@@ -1,5 +1,6 @@
 // Biome ids follow cubiomes' BiomeID enum. Colors are [r,g,b].
-export type Biome = { id: number; name: string; color: [number, number, number] };
+// `dim` is the dimension the biome generates in (0 = Overworld, -1 = Nether).
+export type Biome = { id: number; name: string; color: [number, number, number]; dim: -1 | 0 };
 
 const raw: [number, string, string][] = [
   [0, 'Ocean', '#000070'], [1, 'Plains', '#8db360'], [2, 'Desert', '#fa9418'], [3, 'Windswept Hills', '#606060'],
@@ -39,7 +40,8 @@ const raw: [number, string, string][] = [
 const hex = (h: string): [number, number, number] =>
   [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
-export const BIOMES: Biome[] = raw.map(([id, name, c]) => ({ id, name, color: hex(c) }));
+const NETHER_IDS = new Set([8, 170, 171, 172, 173]);
+export const BIOMES: Biome[] = raw.map(([id, name, c]) => ({ id, name, color: hex(c), dim: NETHER_IDS.has(id) ? -1 : 0 }));
 export const BIOME_BY_ID = new Map(BIOMES.map((b) => [b.id, b]));
 export const biomeName = (id: number) => BIOME_BY_ID.get(id)?.name ?? `Biome ${id}`;
 
