@@ -1,9 +1,12 @@
 import { COLOR_LUT, biomeName } from '../data/biomes';
 import { STRUCTURES } from '../data/structures';
+import { TileCache } from './tileCache';
 
 const TILE = 128;
 const SCALES = [1, 4, 16, 64, 256];
 const MAX_INFLIGHT = 6;
+// ~80 KB per tile (16 KB biome ids + 128x128 RGBA canvas), so ~40 MB. Visible tiles are always kept.
+const TILE_BUDGET = 512;
 const MAX_STRUCT_SPAN = 24000; // blocks; beyond this structure queries are skipped
 
 type Tile = { ids: Uint8Array; canvas?: HTMLCanvasElement; filterVer: number };
@@ -14,7 +17,9 @@ export class MapView {
   // Separate workers so slow structure searches never stall tile generation (and vice versa).
   private worker = new Worker(new URL('../worker/gen.worker.ts', import.meta.url), { type: 'module' });
   private structWorker = new Worker(new URL('../worker/gen.worker.ts', import.meta.url), { type: 'module' });
-  private tiles = new Map<string, Tile>();
+  private tiles = new TileCache<Tile>(TILE_BUDGET, (t) => {
+    if (t.canvas) t.canvas.width = t.canvas.height = 0; // release the backing store promptly
+  });
   private pending = new Set<string>();
   private gen = 0;
   private cx = 0;
@@ -163,6 +168,7 @@ export class MapView {
     const tx0 = Math.floor(wx0 / span), tx1 = Math.floor(wx1 / span);
     const tz0 = Math.floor(wz0 / span), tz1 = Math.floor(wz1 / span);
     const wanted: { key: string; tx: number; tz: number }[] = [];
+    const visible = (tx1 - tx0 + 1) * (tz1 - tz0 + 1);
     for (let tz = tz0; tz <= tz1; tz++)
       for (let tx = tx0; tx <= tx1; tx++) {
         const key = `${scale}:${tx}:${tz}`;
@@ -173,6 +179,8 @@ export class MapView {
           ctx.drawImage(this.tileCanvas(t), Math.floor(sx), Math.floor(sz), Math.ceil(sz2) + 1, Math.ceil(sz2) + 1);
         } else if (!this.pending.has(key)) wanted.push({ key, tx, tz });
       }
+    // Visible tiles were just touched, so they are the most recent; keep some slack for panning back.
+    this.tiles.trim(Math.ceil(visible * 1.5));
     // request nearest tiles first
     const ccx = (tx0 + tx1) / 2, ccz = (tz0 + tz1) / 2;
     wanted.sort((a, b) => Math.hypot(a.tx - ccx, a.tz - ccz) - Math.hypot(b.tx - ccx, b.tz - ccz));
