@@ -1,28 +1,24 @@
 # MC Mapper
 
-Minecraft seed mapper for Cloudflare Pages. Enter a seed, get a pannable/zoomable Overworld biome map with structure markers, biome and structure filters, and saved seeds (Cloudflare D1).
+Minecraft seed mapper for Cloudflare Pages. Enter a seed, get a pannable/zoomable Overworld biome map with structure markers, biome and structure filters, and saved seeds stored in your browser.
 
 - **Generation** runs in the browser: [cubiomes](https://github.com/Cubitect/cubiomes) (MIT, vendored in `vendor/cubiomes`) compiled to WASM (`public/wasm/cubiomes.wasm`, committed) and run in two Web Workers (tiles / structures).
-- **Saved seeds**: Pages Functions (`functions/api/seeds*`) backed by D1. Falls back to `localStorage` if the API is unavailable (plain `vite dev`).
+- **Saved seeds** live in the browser's `localStorage` (`src/storage.ts`). There is no server, so nobody else can see or change them, but they don't sync between browsers or devices. Use **Export** to download them as JSON and **Import** to load that file elsewhere. If the browser refuses to save (storage full, disabled, private mode), the sidebar shows the reason.
 - **Seed input**: numbers (64-bit signed) or text (hashed with Java `String.hashCode`, like the game).
 
 ## Develop
 ```
 npm install
-npm run db:local        # apply D1 migration to the local db
-npm run build
-npm run preview         # wrangler pages dev: UI + API + local D1 on :8788
+npm run dev             # dev server
 npm test
+npm run build && npm run preview
 ```
-`npm run dev` serves only the UI (saved seeds use localStorage).
 
 ## Deploy
 ```
-npx wrangler d1 create mc-mapper          # put the database_id in wrangler.toml
-npm run db:remote
-npm run deploy
+npm run deploy          # build + wrangler pages deploy dist
 ```
-Confirm the `DB` D1 binding on the Pages project. There is no auth: anyone with the URL can edit saved seeds; put Cloudflare Access in front if needed.
+It's a static site: no database or bindings to set up.
 
 ## Rebuild the WASM
 `npm run wasm` (downloads wasi-sdk into `.cache/`; no Emscripten needed). Wrapper: `wasm/wrapper.c`.
