@@ -20,7 +20,13 @@
       <div class="row"><button type="submit">Generate</button><button type="button" id="save" class="alt">Save seed</button></div>
       <p id="note" class="note" hidden>Bedrock uses the nearest Java generator: biomes and structure positions are approximate.</p>
     </form>
-    <details open><summary>Saved seeds</summary><ul id="saved"></ul></details>
+    <details open><summary>Saved seeds</summary>
+      <p class="hint">Stored in this browser only. Export to back up or move them to another device.</p>
+      <p id="savedMsg" class="note" role="status" hidden></p>
+      <ul id="saved"></ul>
+      <div class="row"><button type="button" id="exportSeeds" class="alt">Export</button><button type="button" id="importBtn" class="alt">Import</button></div>
+      <input type="file" id="importSeeds" accept="application/json,.json" hidden />
+    </details>
     <details open><summary>Structures</summary>
       <div class="filterGroup"><h4>Overworld</h4><div id="structsOverworld"></div></div>
       <div class="filterGroup"><h4>Nether</h4><div id="structsNether"></div></div>

@@ -1,5 +1,5 @@
 import './style.css';
-import { seedsApi, type SavedSeed } from './api';
+import { StorageError, createSeedStore, type SavedSeed } from './storage';
 import { BIOMES } from './data/biomes';
 import { STRUCTURES } from './data/structures';
 import { versionsFor, type Edition } from './data/versions';
@@ -36,10 +36,27 @@ function generate() {
 $('seedForm').onsubmit = (e) => { e.preventDefault(); generate(); };
 dimIn.onchange = () => updateDimStyling();
 
-// --- saved seeds ---
+// --- saved seeds (this browser only) ---
+const seeds = createSeedStore();
 const savedEl = $('saved');
-async function refreshSaved() {
-  const list = await seedsApi.list();
+const savedMsg = $('savedMsg');
+function showSavedMsg(msg: string, isError = false) {
+  savedMsg.textContent = msg;
+  savedMsg.classList.toggle('error', isError);
+  savedMsg.hidden = !msg;
+}
+/** Runs a storage change; on failure shows the reason instead of pretending it worked. */
+function attempt(fn: () => void) {
+  try {
+    fn();
+    showSavedMsg('');
+  } catch (e) {
+    showSavedMsg(e instanceof StorageError ? e.message : 'Something went wrong saving seeds.', true);
+  }
+  refreshSaved();
+}
+function refreshSaved() {
+  const list = seeds.list();
   savedEl.innerHTML = '';
   if (!list.length) savedEl.innerHTML = '<li style="color:var(--muted);cursor:default">No saved seeds yet</li>';
   for (const s of list) savedEl.append(savedRow(s));
@@ -52,14 +69,14 @@ function savedRow(s: SavedSeed) {
   li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${dimLabel}`;
   li.onclick = () => load(s);
   const [ren, del] = li.querySelectorAll('button');
-  ren.onclick = async (e) => {
+  ren.onclick = (e) => {
     e.stopPropagation();
     const name = prompt('Rename seed', s.name);
-    if (name?.trim()) { await seedsApi.rename(s.id, name.trim()); refreshSaved(); }
+    if (name?.trim()) attempt(() => seeds.rename(s.id, name));
   };
-  del.onclick = async (e) => {
+  del.onclick = (e) => {
     e.stopPropagation();
-    if (confirm(`Delete "${s.name}"?`)) { await seedsApi.remove(s.id); refreshSaved(); }
+    if (confirm(`Delete "${s.name}"?`)) attempt(() => seeds.remove(s.id));
   };
   return li;
 }
@@ -69,12 +86,28 @@ function load(s: { seed: string; edition: Edition; version: string; dimension?: 
   updateDimStyling();
   generate();
 }
-$('save').onclick = async () => {
+$('save').onclick = () => {
   if (!seedIn.value.trim()) return;
   const name = prompt('Name for this seed', seedIn.value.trim());
   if (name === null) return;
-  await seedsApi.add({ name: name.trim() || seedIn.value.trim(), seed: seedIn.value.trim(), edition: edIn.value as Edition, version: verIn.value, dimension: dimName(dimIn.value), notes: '' });
-  refreshSaved();
+  attempt(() => seeds.add({ name: name.trim() || seedIn.value.trim(), seed: seedIn.value.trim(), edition: edIn.value as Edition, version: verIn.value, dimension: dimName(dimIn.value), notes: '' }));
+};
+$('exportSeeds').onclick = () => {
+  const url = URL.createObjectURL(new Blob([seeds.exportJson()], { type: 'application/json' }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: 'mc-mapper-seeds.json' });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+const importIn = $<HTMLInputElement>('importSeeds');
+$('importBtn').onclick = () => importIn.click();
+importIn.onchange = async () => {
+  const file = importIn.files?.[0];
+  importIn.value = '';
+  if (!file) return;
+  const text = await file.text();
+  let added = 0;
+  attempt(() => { added = seeds.importJson(text); });
+  if (!savedMsg.classList.contains('error')) showSavedMsg(added ? `Imported ${added} seed${added === 1 ? '' : 's'}.` : 'No new seeds in that file.');
 };
 
 // --- structure + biome filters ---
