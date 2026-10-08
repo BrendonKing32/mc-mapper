@@ -53,7 +53,7 @@ export class MapView {
     this.resize();
   }
 
-  setWorld(mc: number, lo: number, hi: number, large = false, dim = 0, at: { x: number; z: number } | null = null) {
+  setWorld(mc: number, lo: number, hi: number, large = false, dim = 0, at: { x: number; z: number } | null = null, bedrock = false) {
     this.gen++;
     this.startAt = at;
     this.tiles.clear();
@@ -64,8 +64,8 @@ export class MapView {
     this.ready = false;
     this.selected = null;
     this.onSelect(null);
-    this.worker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim });
-    this.structWorker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim, quiet: true });
+    this.worker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim, bedrock });
+    this.structWorker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim, bedrock, quiet: true });
     this.onStatus('Generating…');
     this.cx = 0; this.cz = 0;
   }

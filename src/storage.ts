@@ -1,4 +1,4 @@
-import type { Edition } from './data/versions';
+import { currentVersionLabel, type Edition } from './data/versions';
 
 export type Dimension = 'overworld' | 'nether' | 'end';
 export type SavedSeed = {
@@ -28,7 +28,7 @@ export function normalize(v: unknown): SavedSeed | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Record<string, unknown>;
   const seed = str(o.seed, 100).trim();
-  const version = str(o.version, 40);
+  const version = currentVersionLabel(str(o.version, 40));
   if (!seed || !version || typeof o.id !== 'string' || !o.id) return null;
   return {
     id: o.id,

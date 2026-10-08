@@ -6,6 +6,16 @@ export type ChangelogEntry = { id: string; date: string; title: string; items: s
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-08-bedrock-structures',
+    date: '2026-10-08',
+    title: 'Real Bedrock structure positions',
+    items: [
+      "Bedrock maps now place villages, temples, monuments, outposts, mansions, ancient cities, shipwrecks, fortresses, bastions and more where Bedrock does, instead of where Java would.",
+      'Bedrock seeds use all 64 bits like the game does, so large numeric seeds now show the right biomes.',
+      'Structures still approximate on Bedrock (like strongholds) are marked ≈ in the filters.',
+    ],
+  },
+  {
     id: '2026-10-08-whats-new',
     date: '2026-10-08',
     title: "What's new",
