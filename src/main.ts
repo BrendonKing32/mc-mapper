@@ -202,12 +202,15 @@ function refreshPortal() {
 }
 owX.oninput = owZ.oninput = () => convert('overworld');
 neX.oninput = neZ.oninput = () => convert('nether');
+/** Puts a coordinate into one side of the calculator and fills in the other. */
+function fillPortal(from: 'overworld' | 'nether', x: number, z: number) {
+  const [ix, iz] = from === 'overworld' ? [owX, owZ] : [neX, neZ];
+  ix.value = String(x); iz.value = String(z);
+  convert(from);
+}
 $('portalCenter').onclick = () => {
   const c = map.center();
-  const from = shownDim === 'nether' ? 'nether' : 'overworld';
-  const [ix, iz] = from === 'overworld' ? [owX, owZ] : [neX, neZ];
-  ix.value = String(c.x); iz.value = String(c.z);
-  convert(from);
+  fillPortal(shownDim === 'nether' ? 'nether' : 'overworld', c.x, c.z);
 };
 function showPortal(dim: 'overworld' | 'nether') {
   const at = portalTarget(dim);
@@ -298,6 +301,7 @@ function renderPick(saved = activeSeed()) {
   if (!f) return;
   const def = STRUCTURES.find((s) => s.type === f.type)!;
   el.innerHTML = `<b>${def.icon} ${def.name}</b><br>X ${f.x}, Z ${f.z}<br><code>/tp @s ${f.x} ~ ${f.z}</code>`;
+  if (def.dim !== 1) el.append(portalPick(f, def.dim === -1 ? 'nether' : 'overworld'));
   if (!saved) {
     el.insertAdjacentHTML('beforeend', '<p class="hint">Save this seed to mark structures visited.</p>');
     return;
@@ -310,6 +314,33 @@ function renderPick(saved = activeSeed()) {
   btn.textContent = visited ? '✓ Visited (undo)' : 'Mark visited';
   btn.onclick = () => attempt(() => seeds.setVisited(saved.id, key, !visited));
   el.append(btn);
+}
+/** Structure whose portal coordinates are showing in the popup, so re-renders (e.g. Mark visited) keep them. */
+let portalShownFor: string | null = null;
+/** "Portal coords" button for the selected structure; once clicked, the matching spot in the other dimension. */
+function portalPick(f: { type: number; x: number; z: number }, from: 'overworld' | 'nether') {
+  const key = structureKey(f.type, f.x, f.z);
+  const to = from === 'overworld' ? 'nether' : 'overworld';
+  const wrap = document.createElement('div');
+  wrap.className = 'pickPortal';
+  if (portalShownFor !== key) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'alt';
+    btn.textContent = `${to === 'nether' ? 'Nether' : 'Overworld'} portal coords`;
+    btn.onclick = () => { portalShownFor = key; fillPortal(from, f.x, f.z); renderPick(); };
+    wrap.append(btn);
+    return wrap;
+  }
+  const at = from === 'overworld' ? toNether(f.x, f.z) : toOverworld(f.x, f.z);
+  wrap.innerHTML = `<span>${to === 'nether' ? 'Nether' : 'Overworld'}: X ${at.x}, Z ${at.z}</span>`;
+  const go = document.createElement('button');
+  go.type = 'button';
+  go.className = 'alt';
+  go.textContent = `Show in ${to === 'nether' ? 'Nether' : 'Overworld'}`;
+  go.onclick = () => showPortal(to);
+  wrap.append(go);
+  return wrap;
 }
 $('goto').onsubmit = (e) => {
   e.preventDefault();
