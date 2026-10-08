@@ -1,8 +1,19 @@
 import type { Edition } from './data/versions';
 
 export type Dimension = 'overworld' | 'nether' | 'end';
-export type SavedSeed = { id: string; name: string; seed: string; edition: Edition; version: string; dimension: Dimension; notes: string; created_at: number };
-export type NewSeed = Omit<SavedSeed, 'id' | 'created_at'>;
+export type SavedSeed = {
+  id: string; name: string; seed: string; edition: Edition; version: string; dimension: Dimension; notes: string;
+  /** Structures marked as visited, as `structureKey()` strings. */
+  visited: string[];
+  created_at: number;
+};
+export type NewSeed = Omit<SavedSeed, 'id' | 'created_at' | 'visited'> & { visited?: string[] };
+
+export const MAX_NOTES = 5000;
+export const MAX_VISITED = 5000;
+/** Identifies a structure within a seed: cubiomes type plus block position (types are unique per dimension). */
+export const structureKey = (type: number, x: number, z: number) => `${type}:${x}:${z}`;
+const KEY_RE = /^\d+:-?\d+:-?\d+$/;
 
 export const KEY = 'mc-mapper:seeds:v1';
 /** Key used when seeds were mirrored from the old D1 API; migrated on first read. */
@@ -26,7 +37,10 @@ export function normalize(v: unknown): SavedSeed | null {
     edition: o.edition === 'bedrock' ? 'bedrock' : 'java',
     version,
     dimension: o.dimension === 'nether' || o.dimension === 'end' ? o.dimension : 'overworld',
-    notes: str(o.notes, 1000),
+    notes: str(o.notes, MAX_NOTES),
+    visited: Array.isArray(o.visited)
+      ? [...new Set(o.visited.filter((k): k is string => typeof k === 'string' && KEY_RE.test(k)))].slice(0, MAX_VISITED)
+      : [],
     created_at: typeof o.created_at === 'number' && Number.isFinite(o.created_at) ? o.created_at : Date.now(),
   };
 }
@@ -82,6 +96,17 @@ export function createSeedStore(storage: Storage | null = defaultStorage()) {
     },
     rename(id: string, name: string) {
       write(list().map((s) => (s.id === id ? { ...s, name: name.trim().slice(0, 100) || s.name } : s)));
+    },
+    setNotes(id: string, notes: string) {
+      write(list().map((s) => (s.id === id ? { ...s, notes: notes.slice(0, MAX_NOTES) } : s)));
+    },
+    setVisited(id: string, key: string, visited: boolean) {
+      write(list().map((s) => {
+        if (s.id !== id) return s;
+        const rest = s.visited.filter((k) => k !== key);
+        if (visited && rest.length >= MAX_VISITED) throw new StorageError(`You can mark at most ${MAX_VISITED} structures as visited per seed.`);
+        return { ...s, visited: visited ? [...rest, key] : rest };
+      }));
     },
     remove(id: string) {
       write(list().filter((s) => s.id !== id));
