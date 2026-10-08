@@ -8,7 +8,7 @@
 </head>
 <body>
   <aside id="side" aria-label="Seed and filters">
-    <div class="sideHead"><h1>MC Mapper</h1><button type="button" id="closeSide" class="alt iconBtn" aria-label="Close menu">✕</button></div>
+    <div class="sideHead"><h1>MC Mapper</h1><button type="button" id="whatsNew" class="alt">What's new</button><button type="button" id="closeSide" class="alt iconBtn" aria-label="Close menu">✕</button></div>
     <form id="seedForm">
       <label>Seed <input id="seed" placeholder="number or text" autocomplete="off" required /></label>
       <div class="row">
@@ -67,6 +67,10 @@
     <form id="goto"><input id="gx" placeholder="X" size="6" aria-label="X" /><input id="gz" placeholder="Z" size="6" aria-label="Z" /><button>Go</button><button type="button" id="spawn" class="alt">Spawn</button></form>
     <div id="pick" hidden></div>
   </main>
+  <dialog id="changelog" aria-labelledby="changelogTitle"><div class="dlgBody">
+    <div class="sideHead"><h2 id="changelogTitle">What's new</h2><button type="button" id="closeChangelog" class="alt iconBtn" aria-label="Close">✕</button></div>
+    <div id="changelogList"></div>
+  </div></dialog>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
