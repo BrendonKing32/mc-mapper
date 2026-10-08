@@ -27,4 +27,4 @@ It's a static site served from Workers static assets (`wrangler.toml`): no Worke
 `npm run wasm` (downloads wasi-sdk into `.cache/`; no Emscripten needed). Wrapper: `wasm/wrapper.c`.
 
 ## Bedrock caveat
-cubiomes only implements **Java** generation. The Bedrock option reuses the nearest Java generator and truncates seeds to 32 bits, so Bedrock biomes and especially structure positions are **approximate** (flagged in the UI). Exact Bedrock support needs Bedrock-specific structure salts/spacing and verification against real worlds.
+cubiomes only implements **Java** generation. The Bedrock option reuses the nearest Java generator and truncates seeds to 32 bits, so Bedrock biomes and especially structure positions are **approximate estimates**, not exact locations. You must acknowledge this before generating a Bedrock map; the map and selected structure details keep the warning visible. Structure filters unavailable in the selected generator version are disabled. Exact Bedrock support needs Bedrock-specific structure salts/spacing and verification against real worlds.

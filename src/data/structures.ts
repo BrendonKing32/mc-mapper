@@ -1,15 +1,15 @@
 // `type` is cubiomes' StructureType; 100 = strongholds (handled specially).
 // `dim` is the dimension the structure generates in (0 = Overworld, -1 = Nether, 1 = End); defaults to 0.
-export type StructureDef = { type: number; key: string; name: string; icon: string; color: string; dim?: -1 | 0 | 1 };
+export type StructureDef = { type: number; key: string; name: string; icon: string; color: string; dim?: -1 | 0 | 1; minMc?: number };
 export const STRUCTURES: StructureDef[] = [
   { type: 5, key: 'village', name: 'Village', icon: '🏘️', color: '#c97b2a' },
   { type: 10, key: 'outpost', name: 'Pillager Outpost', icon: '🏴', color: '#7a3b3b' },
   { type: 9, key: 'mansion', name: 'Woodland Mansion', icon: '🏚️', color: '#5b3a1e' },
   { type: 8, key: 'monument', name: 'Ocean Monument', icon: '🔱', color: '#2aa9c9' },
   { type: 100, key: 'stronghold', name: 'Stronghold', icon: '🏰', color: '#444' },
-  { type: 13, key: 'ancient_city', name: 'Ancient City', icon: '💀', color: '#1a5260' },
-  { type: 24, key: 'trial_chambers', name: 'Trial Chambers', icon: '⚔️', color: '#b8742a' },
-  { type: 23, key: 'trail_ruins', name: 'Trail Ruins', icon: '🏺', color: '#9a7b4f' },
+  { type: 13, key: 'ancient_city', name: 'Ancient City', icon: '💀', color: '#1a5260', minMc: 23 },
+  { type: 24, key: 'trial_chambers', name: 'Trial Chambers', icon: '⚔️', color: '#b8742a', minMc: 26 },
+  { type: 23, key: 'trail_ruins', name: 'Trail Ruins', icon: '🏺', color: '#9a7b4f', minMc: 25 },
   { type: 1, key: 'desert_pyramid', name: 'Desert Pyramid', icon: '🔺', color: '#d9b64a' },
   { type: 2, key: 'jungle_temple', name: 'Jungle Temple', icon: '🛕', color: '#3d8a3d' },
   { type: 3, key: 'swamp_hut', name: 'Swamp Hut', icon: '🧙', color: '#4d6b3a' },
@@ -27,3 +27,5 @@ export const STRUCTURES: StructureDef[] = [
   { type: 21, key: 'end_gateway', name: 'End Gateway', icon: '🌌', color: '#2bd9c4', dim: 1 },
   { type: 22, key: 'end_island', name: 'End Island', icon: '🏝️', color: '#f0f0ff', dim: 1 },
 ];
+
+export const isStructureAvailable = (structure: StructureDef, mc: number) => mc >= (structure.minMc ?? 0);
