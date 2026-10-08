@@ -4,6 +4,7 @@ import { BIOMES } from './data/biomes';
 import { STRUCTURES } from './data/structures';
 import { versionsFor, type Edition } from './data/versions';
 import { MapView } from './map/map';
+import { parseCoord, toNether, toOverworld } from './portal';
 import { parseSeed, seedParts } from './seed';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -25,16 +26,20 @@ function fillVersions(selected?: string) {
 edIn.onchange = () => fillVersions();
 fillVersions();
 
-function generate() {
+/** Dimension of the world on the map (the select can be changed without regenerating). */
+let shownDim: DimName | null = null;
+function generate(at: { x: number; z: number } | null = null) {
   const edition = edIn.value as Edition;
   const mc = versionsFor(edition).find((v) => v.label === verIn.value)!.mc;
   const { lo, hi } = seedParts(parseSeed(seedIn.value, edition));
   saveNotes();
   generated = { seed: seedIn.value.trim(), edition, version: verIn.value };
-  map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[dimName(dimIn.value)]);
+  shownDim = dimName(dimIn.value);
+  map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[shownDim], at);
   const q = new URLSearchParams({ seed: seedIn.value, edition, version: verIn.value, dimension: dimIn.value });
   history.replaceState(null, '', `?${q}`);
   refreshActive();
+  refreshPortal();
 }
 $('seedForm').onsubmit = (e) => { e.preventDefault(); generate(); setSideOpen(false); };
 dimIn.onchange = () => updateDimStyling();
@@ -171,6 +176,51 @@ importIn.onchange = async () => {
   attempt(() => { added = seeds.importJson(text); });
   if (!savedMsg.classList.contains('error')) showSavedMsg(added ? `Imported ${added} seed${added === 1 ? '' : 's'}.` : 'No new seeds in that file.');
 };
+
+// --- nether portal calculator ---
+const owX = $<HTMLInputElement>('owX'), owZ = $<HTMLInputElement>('owZ');
+const neX = $<HTMLInputElement>('neX'), neZ = $<HTMLInputElement>('neZ');
+/** Fills the other side from the side just typed in; returns false if that side isn't two numbers. */
+function convert(from: 'overworld' | 'nether'): boolean {
+  const [ix, iz, ox, oz] = from === 'overworld' ? [owX, owZ, neX, neZ] : [neX, neZ, owX, owZ];
+  const x = parseCoord(ix.value), z = parseCoord(iz.value);
+  if (x === null || z === null) { ox.value = oz.value = ''; refreshPortal(); return false; }
+  const out = from === 'overworld' ? toNether(x, z) : toOverworld(x, z);
+  ox.value = String(out.x); oz.value = String(out.z);
+  refreshPortal();
+  return true;
+}
+function portalTarget(dim: 'overworld' | 'nether') {
+  const [ix, iz] = dim === 'overworld' ? [owX, owZ] : [neX, neZ];
+  const x = parseCoord(ix.value), z = parseCoord(iz.value);
+  return x === null || z === null ? null : { x, z };
+}
+function refreshPortal() {
+  $<HTMLButtonElement>('showOw').disabled = !generated || !portalTarget('overworld');
+  $<HTMLButtonElement>('showNe').disabled = !generated || !portalTarget('nether');
+  $<HTMLButtonElement>('portalCenter').disabled = !generated || shownDim === 'end';
+}
+owX.oninput = owZ.oninput = () => convert('overworld');
+neX.oninput = neZ.oninput = () => convert('nether');
+$('portalCenter').onclick = () => {
+  const c = map.center();
+  const from = shownDim === 'nether' ? 'nether' : 'overworld';
+  const [ix, iz] = from === 'overworld' ? [owX, owZ] : [neX, neZ];
+  ix.value = String(c.x); iz.value = String(c.z);
+  convert(from);
+};
+function showPortal(dim: 'overworld' | 'nether') {
+  const at = portalTarget(dim);
+  if (!at || !generated) return;
+  setSideOpen(false);
+  if (shownDim === dim) return map.goTo(at.x, at.z);
+  dimIn.value = dim;
+  updateDimStyling();
+  generate(at);
+}
+$('showOw').onclick = () => showPortal('overworld');
+$('showNe').onclick = () => showPortal('nether');
+refreshPortal();
 
 // --- structure + biome filters ---
 const DEFAULT_ON_KEYS = new Set(['village', 'outpost', 'mansion', 'monument', 'stronghold', 'fortress', 'bastion', 'end_city']);

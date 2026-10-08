@@ -8,6 +8,7 @@ label { display:block; color:var(--muted); font-size:12px; margin-bottom:8px; fl
 input:not([type=checkbox]), select, textarea { width:100%; margin-top:3px; padding:6px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; }
 .row { display:flex; gap:8px; } .check { display:flex; gap:6px; align-items:center; }
 button { padding:7px 10px; background:var(--accent); color:#06140d; border:0; border-radius:6px; font-weight:600; cursor:pointer; flex:1; }
+button:disabled { opacity:.45; cursor:default; }
 button.alt { background:var(--line); color:var(--text); }
 .note { color:#e0b050; font-size:12px; }
 .note.error { color:#ff7b72; }
@@ -39,6 +40,8 @@ main { flex:1; position:relative; min-width:0; }
 #pick code { user-select:all; }
 #pick button { display:block; width:100%; margin-top:6px; } #pick button.done { background:var(--line); color:var(--text); }
 #pick .hint { margin:6px 0 0; }
+.portalRow { align-items:center; margin-bottom:6px; } .portalRow span { width:68px; flex:none; color:var(--muted); font-size:12px; }
+.portalRow input:not([type=checkbox]) { margin-top:0; min-width:0; } .portalShow { margin:6px 0; }
 #notes { resize:vertical; font:inherit; margin-top:0; }
 /* Phones: the map fills the screen and the sidebar slides in over it. */
 @media (max-width:700px) {
