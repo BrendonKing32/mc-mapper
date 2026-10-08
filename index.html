@@ -27,7 +27,7 @@
     <details open><summary>Saved seeds</summary>
       <p class="hint">Stored in this browser only. Export to back up or move them to another device.</p>
       <p id="savedMsg" class="note" role="status" hidden></p>
-      <ul id="saved"></ul>
+      <ul id="saved" class="list"></ul>
       <div class="row"><button type="button" id="exportSeeds" class="alt">Export</button><button type="button" id="importBtn" class="alt">Import</button></div>
       <input type="file" id="importSeeds" accept="application/json,.json" hidden />
     </details>
@@ -36,6 +36,13 @@
       <div id="notesPanel" hidden>
         <p class="hint">For <b id="notesFor"></b> · <span id="visitedCount"></span></p>
         <textarea id="notes" aria-label="Seed notes" rows="6" maxlength="5000" placeholder="Base coords, portal links, things to come back for…"></textarea>
+      </div>
+    </details>
+    <details open><summary>Pins</summary>
+      <p id="pinsHint" class="hint">Save this seed to drop pins on the map.</p>
+      <div id="pinsPanel" hidden>
+        <p class="hint">Tap 📍 then the map, or right-click the map, to drop a pin.</p>
+        <ul id="pins" class="list"></ul>
       </div>
     </details>
     <details open><summary>Nether portal</summary>
@@ -66,7 +73,8 @@
   <main>
     <canvas id="map"></canvas>
     <button type="button" id="openSide" class="iconBtn" aria-label="Open menu" aria-controls="side" aria-expanded="false">☰</button>
-    <div id="zoomBtns"><button type="button" id="zoomIn" class="iconBtn" aria-label="Zoom in">+</button><button type="button" id="zoomOut" class="iconBtn" aria-label="Zoom out">−</button></div>
+    <div id="zoomBtns"><button type="button" id="zoomIn" class="iconBtn" aria-label="Zoom in">+</button><button type="button" id="zoomOut" class="iconBtn" aria-label="Zoom out">−</button><button type="button" id="pinBtn" class="iconBtn" aria-label="Drop a pin" aria-pressed="false" title="Drop a pin (or right-click the map)">📍</button></div>
+    <div id="pinTip" role="status" hidden></div>
     <div id="hud"><span id="coords">—</span><span id="status"></span></div>
     <form id="goto"><input id="gx" placeholder="X" size="6" aria-label="X" /><input id="gz" placeholder="Z" size="6" aria-label="Z" /><button>Go</button><button type="button" id="spawn" class="alt">Spawn</button></form>
     <div id="pick" hidden></div>

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { KEY, LEGACY_KEY, MAX_NOTES, StorageError, createSeedStore, structureKey } from '../src/storage';
+import { KEY, LEGACY_KEY, MAX_NOTES, MAX_PIN_NAME, StorageError, createSeedStore, structureKey } from '../src/storage';
 
 class MemoryStorage implements Storage {
   map = new Map<string, string>();
@@ -61,6 +61,42 @@ describe('seed store', () => {
     const dst = createSeedStore(new MemoryStorage());
     dst.importJson(src.exportJson());
     expect(dst.list()[0]).toMatchObject({ notes: 'hi', visited: ['100:1200:-400'] });
+  });
+
+  it('adds, renames and removes pins', () => {
+    const store = createSeedStore(mem);
+    const a = store.add(seed);
+    const b = store.add({ ...seed, seed: '2' });
+    expect(a.pins).toEqual([]);
+    const base = store.addPin(a.id, { name: '  Base ', x: 120, z: -340, dimension: 'overworld' });
+    const hub = store.addPin(a.id, { name: '', x: 15, z: -42, dimension: 'nether' });
+    expect(store.list().find((s) => s.id === a.id)?.pins).toMatchObject([
+      { id: base.id, name: 'Base', x: 120, z: -340, dimension: 'overworld' },
+      { id: hub.id, name: 'Pin', x: 15, z: -42, dimension: 'nether' },
+    ]);
+    expect(store.list().find((s) => s.id === b.id)?.pins).toEqual([]);
+    store.renamePin(a.id, hub.id, 'x'.repeat(100));
+    store.renamePin(a.id, base.id, '   ');
+    let pins = store.list().find((s) => s.id === a.id)!.pins;
+    expect(pins.map((p) => p.name)).toEqual(['Base', 'x'.repeat(MAX_PIN_NAME)]);
+    store.removePin(a.id, base.id);
+    pins = store.list().find((s) => s.id === a.id)!.pins;
+    expect(pins.map((p) => p.id)).toEqual([hub.id]);
+    expect(() => store.addPin(a.id, { name: 'far', x: 1.5, z: 0, dimension: 'overworld' })).toThrow(StorageError);
+  });
+
+  it('keeps pins through export and import and drops malformed ones', () => {
+    const src = createSeedStore(mem);
+    const a = src.add(seed);
+    src.addPin(a.id, { name: 'Base', x: 1, z: 2, dimension: 'end' });
+    const dst = createSeedStore(new MemoryStorage());
+    dst.importJson(src.exportJson());
+    expect(dst.list()[0].pins).toMatchObject([{ name: 'Base', x: 1, z: 2, dimension: 'end' }]);
+
+    const ok = { id: 'p', name: 'ok', x: 3, z: 4 };
+    mem.setItem(KEY, JSON.stringify([{ id: 'y', seed: '1', version: '1.20',
+      pins: [ok, ok, null, { id: 'q', x: '3', z: 4 }, { id: 'r', x: 4e7, z: 0 }, { x: 1, z: 1 }] }]));
+    expect(createSeedStore(mem).list()[0].pins).toMatchObject([{ id: 'p', name: 'ok', x: 3, z: 4, dimension: 'overworld' }]);
   });
 
   it('drops malformed visited entries', () => {
