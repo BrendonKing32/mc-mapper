@@ -1,3 +1,10 @@
 name = "mc-mapper"
 compatibility_date = "2025-01-01"
-pages_build_output_dir = "dist"
+
+# Static site served by Workers static assets; no Worker script.
+# `wrangler deploy` runs the build first, so the Workers Builds deploy command can stay `npx wrangler deploy`.
+[build]
+command = "npm run build"
+
+[assets]
+directory = "./dist"

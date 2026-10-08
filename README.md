@@ -1,6 +1,6 @@
 # MC Mapper
 
-Minecraft seed mapper for Cloudflare Pages. Enter a seed, get a pannable/zoomable Overworld biome map with structure markers, biome and structure filters, and saved seeds stored in your browser.
+Minecraft seed mapper for Cloudflare Workers (static assets). Enter a seed, get a pannable/zoomable Overworld biome map with structure markers, biome and structure filters, and saved seeds stored in your browser.
 
 - **Generation** runs in the browser: [cubiomes](https://github.com/Cubitect/cubiomes) (MIT, vendored in `vendor/cubiomes`) compiled to WASM (`public/wasm/cubiomes.wasm`, committed) and run in two Web Workers (tiles / structures).
 - **Saved seeds** live in the browser's `localStorage` (`src/storage.ts`). There is no server, so nobody else can see or change them, but they don't sync between browsers or devices. Use **Export** to download them as JSON and **Import** to load that file elsewhere. If the browser refuses to save (storage full, disabled, private mode), the sidebar shows the reason.
@@ -17,9 +17,9 @@ npm run build && npm run preview
 
 ## Deploy
 ```
-npm run deploy          # build + wrangler pages deploy dist
+npm run deploy          # wrangler deploy (builds first, then uploads dist/ as Worker static assets)
 ```
-It's a static site: no database or bindings to set up.
+It's a static site served from Workers static assets (`wrangler.toml`): no Worker script, database or bindings to set up. With Cloudflare Workers Builds connected to the repo, leave the build command empty (or `npm run build`) and the deploy command as `npx wrangler deploy`.
 
 ## Rebuild the WASM
 `npm run wasm` (downloads wasi-sdk into `.cache/`; no Emscripten needed). Wrapper: `wasm/wrapper.c`.
