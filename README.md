@@ -19,7 +19,7 @@ npm run build && npm run preview
 ```
 npm run deploy          # wrangler deploy (builds first, then uploads dist/ as Worker static assets)
 ```
-It's a static site served from Workers static assets (`wrangler.toml`): no Worker script, database or bindings to set up. With Cloudflare Workers Builds connected to the repo, leave the build command empty (or `npm run build`) and the deploy command as `npx wrangler deploy`.
+It's a static site served from Workers static assets (`wrangler.toml`): no Worker script, database or bindings to set up. With Cloudflare Workers Builds connected to the repo, set the **build command** to `npm run build` (Workers Builds ignores `[build]` in `wrangler.toml`, and without it `dist/` doesn't exist) and keep the default deploy commands (`npx wrangler deploy`, and `npx wrangler versions upload` for other branches).
 
 ## Rebuild the WASM
 `npm run wasm` (downloads wasi-sdk into `.cache/`; no Emscripten needed). Wrapper: `wasm/wrapper.c`.

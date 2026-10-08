@@ -2,7 +2,8 @@ name = "mc-mapper"
 compatibility_date = "2025-01-01"
 
 # Static site served by Workers static assets; no Worker script.
-# `wrangler deploy` runs the build first, so the Workers Builds deploy command can stay `npx wrangler deploy`.
+# [build] makes a local `wrangler deploy` build first. Workers Builds ignores it, so its
+# build command must be set to `npm run build` in the Cloudflare dashboard.
 [build]
 command = "npm run build"
 
