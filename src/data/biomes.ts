@@ -1,6 +1,7 @@
 // Biome ids follow cubiomes' BiomeID enum. Colors are [r,g,b].
 // `dim` is the dimension the biome generates in (0 = Overworld, -1 = Nether, 1 = End).
-export type Biome = { id: number; name: string; color: [number, number, number]; dim: -1 | 0 | 1 };
+// `underground` biomes never appear on the map, which shows surface biomes only.
+export type Biome = { id: number; name: string; color: [number, number, number]; dim: -1 | 0 | 1; underground: boolean };
 
 const raw: [number, string, string][] = [
   [0, 'Ocean', '#000070'], [1, 'Plains', '#8db360'], [2, 'Desert', '#fa9418'], [3, 'Windswept Hills', '#606060'],
@@ -45,8 +46,9 @@ const hex = (h: string): [number, number, number] =>
 
 const NETHER_IDS = new Set([8, 170, 171, 172, 173]);
 const END_IDS = new Set([9, 40, 41, 42, 43]);
+const UNDERGROUND_IDS = new Set([174, 175, 183]); // dripstone caves, lush caves, deep dark
 const dimOf = (id: number): -1 | 0 | 1 => (NETHER_IDS.has(id) ? -1 : END_IDS.has(id) ? 1 : 0);
-export const BIOMES: Biome[] = raw.map(([id, name, c]) => ({ id, name, color: hex(c), dim: dimOf(id) }));
+export const BIOMES: Biome[] = raw.map(([id, name, c]) => ({ id, name, color: hex(c), dim: dimOf(id), underground: UNDERGROUND_IDS.has(id) }));
 export const BIOME_BY_ID = new Map(BIOMES.map((b) => [b.id, b]));
 export const biomeName = (id: number) => BIOME_BY_ID.get(id)?.name ?? `Biome ${id}`;
 

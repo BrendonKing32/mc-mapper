@@ -194,7 +194,7 @@ map.setStructures(new Set(structOn));
 const biomeOn = new Set<number>();
 const biomeEl = $('biomes');
 const biomeEls: Record<DimName, HTMLElement> = { overworld: $('biomesOverworld'), nether: $('biomesNether'), end: $('biomesEnd') };
-const biomeRows = BIOMES.map((b) => {
+const biomeRows = BIOMES.filter((b) => !b.underground).map((b) => {
   const l = document.createElement('label');
   l.className = 'opt';
   l.dataset.name = b.name.toLowerCase();
