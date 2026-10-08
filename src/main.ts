@@ -1,4 +1,6 @@
 import './style.css';
+import { createChangelogSeen } from './changelog';
+import { CHANGELOG } from './data/changelog';
 import { StorageError, createSeedStore, structureKey, type SavedSeed } from './storage';
 import { BIOMES } from './data/biomes';
 import { STRUCTURES } from './data/structures';
@@ -286,6 +288,43 @@ openBtn.onclick = () => setSideOpen(true);
 $('closeSide').onclick = () => setSideOpen(false);
 $('scrim').onclick = () => setSideOpen(false);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setSideOpen(false); });
+
+// --- what's new ---
+const changelog = createChangelogSeen(CHANGELOG, seeds.list().length > 0);
+const changelogDlg = $<HTMLDialogElement>('changelog');
+const whatsNewBtn = $('whatsNew');
+function refreshWhatsNewDot() {
+  const n = changelog.unseen().length;
+  whatsNewBtn.classList.toggle('hasNew', n > 0);
+  openBtn.classList.toggle('hasNew', n > 0); // the button is hidden in the closed drawer on phones
+  whatsNewBtn.title = n ? `${n} new update${n === 1 ? '' : 's'}` : '';
+}
+function renderChangelog() {
+  const fresh = new Set(changelog.unseen().map((e) => e.id));
+  const list = $('changelogList');
+  list.innerHTML = '';
+  for (const e of CHANGELOG) {
+    const sec = document.createElement('section');
+    sec.innerHTML = '<h3></h3><time></time><ul></ul>';
+    sec.querySelector('h3')!.textContent = e.title;
+    if (fresh.has(e.id)) sec.querySelector('h3')!.insertAdjacentHTML('beforeend', ' <span class="newTag">New</span>');
+    const time = sec.querySelector('time')!;
+    time.dateTime = e.date;
+    time.textContent = new Date(`${e.date}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    for (const item of e.items) sec.querySelector('ul')!.append(Object.assign(document.createElement('li'), { textContent: item }));
+    list.append(sec);
+  }
+}
+whatsNewBtn.onclick = () => {
+  renderChangelog(); // before marking seen, so the "New" tags show this once
+  changelog.markSeen();
+  refreshWhatsNewDot();
+  changelogDlg.showModal();
+};
+$('closeChangelog').onclick = () => changelogDlg.close();
+// click on the backdrop (outside the dialog box) closes it
+changelogDlg.onclick = (e) => { if (e.target === changelogDlg) changelogDlg.close(); };
+refreshWhatsNewDot();
 
 // --- HUD ---
 map.onHover = (x, z, biome) => ($('coords').textContent = `X ${x}  Z ${z}${biome ? ' · ' + biome : ''}`);
