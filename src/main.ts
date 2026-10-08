@@ -30,7 +30,7 @@ function generate() {
   const mc = versionsFor(edition).find((v) => v.label === verIn.value)!.mc;
   const { lo, hi } = seedParts(parseSeed(seedIn.value, edition));
   saveNotes();
-  generated = { seed: seedIn.value.trim(), edition };
+  generated = { seed: seedIn.value.trim(), edition, version: verIn.value };
   map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[dimName(dimIn.value)]);
   const q = new URLSearchParams({ seed: seedIn.value, edition, version: verIn.value, dimension: dimIn.value });
   history.replaceState(null, '', `?${q}`);
@@ -49,14 +49,14 @@ function showSavedMsg(msg: string, isError = false) {
   savedMsg.hidden = !msg;
 }
 /** Runs a storage change; on failure shows the reason instead of pretending it worked. */
-function attempt(fn: () => void) {
+function attempt(fn: () => void, refresh = true) {
   try {
     fn();
     showSavedMsg('');
   } catch (e) {
     showSavedMsg(e instanceof StorageError ? e.message : 'Something went wrong saving seeds.', true);
   }
-  refreshSaved();
+  if (refresh) refreshSaved();
 }
 function refreshSaved() {
   const list = seeds.list();
@@ -68,20 +68,27 @@ function refreshSaved() {
 
 // --- notes + visited structures, kept on the saved seed matching the map ---
 let activeId: string | null = null;
-let generated: { seed: string; edition: Edition } | null = null;
+let generated: { seed: string; edition: Edition; version: string } | null = null;
+/** The saved seed whose notes are in the textarea, so typed text is never saved onto a different seed. */
+let notesOwner: string | null = null;
 const notesIn = $<HTMLTextAreaElement>('notes');
 const hideVisitedIn = $<HTMLInputElement>('hideVisited');
 let selected: { type: number; x: number; z: number } | null = null;
 let notesTimer = 0;
-/** The saved seed for the generated world: the one last loaded/saved if it still matches, else the newest match. */
+/**
+ * The saved seed for the generated world: same seed and edition, preferring the same version, then the one last
+ * loaded/saved, then the newest. Dimension is ignored on purpose: one saved seed covers all three dimensions.
+ */
 function activeSeed(list = seeds.list()): SavedSeed | null {
   if (!generated) return null;
-  const matches = (s: SavedSeed) => s.seed === generated!.seed && s.edition === generated!.edition;
-  return list.find((s) => s.id === activeId && matches(s)) ?? list.find(matches) ?? null;
+  const g = generated;
+  const matches = (s: SavedSeed) => s.seed === g.seed && s.edition === g.edition;
+  const exact = (s: SavedSeed) => matches(s) && s.version === g.version;
+  return list.find((s) => s.id === activeId && exact(s)) ?? list.find(exact)
+    ?? list.find((s) => s.id === activeId && matches(s)) ?? list.find(matches) ?? null;
 }
 function refreshActive(list = seeds.list()) {
   const s = activeSeed(list);
-  const changed = (s?.id ?? null) !== activeId;
   activeId = s?.id ?? null;
   $('notesHint').hidden = !!s;
   $('notesPanel').hidden = !s;
@@ -89,15 +96,20 @@ function refreshActive(list = seeds.list()) {
     $('notesFor').textContent = s.name;
     $('visitedCount').textContent = `${s.visited.length} visited`;
     // don't clobber what the user is typing
-    if (changed || document.activeElement !== notesIn) notesIn.value = s.notes;
+    if (s.id !== notesOwner || document.activeElement !== notesIn) notesIn.value = s.notes;
   }
+  notesOwner = s?.id ?? null;
   map.setVisited(new Set(s?.visited ?? []), hideVisitedIn.checked);
   renderPick(s);
 }
 function saveNotes() {
   clearTimeout(notesTimer);
-  const s = activeSeed();
-  if (s && s.notes !== notesIn.value) attempt(() => seeds.setNotes(s.id, notesIn.value));
+  const s = seeds.list().find((x) => x.id === notesOwner);
+  if (!s || s.notes === notesIn.value) return;
+  // no list rebuild: this runs on blur, and replacing the rows would swallow the click that caused it
+  attempt(() => seeds.setNotes(s.id, notesIn.value), false);
+  const row = savedEl.querySelector<HTMLElement>(`li[data-id="${s.id}"]`);
+  if (row) row.title = notesIn.value;
 }
 notesIn.oninput = () => { clearTimeout(notesTimer); notesTimer = window.setTimeout(saveNotes, 500); };
 notesIn.onblur = saveNotes;
@@ -105,6 +117,7 @@ window.addEventListener('pagehide', saveNotes);
 hideVisitedIn.onchange = () => refreshActive();
 function savedRow(s: SavedSeed) {
   const li = document.createElement('li');
+  li.dataset.id = s.id;
   li.innerHTML = `<div class="meta"><b></b><small></small></div><button title="Rename">✎</button><button title="Delete">✕</button>`;
   li.querySelector('b')!.textContent = s.name;
   const dimLabel = s.dimension === 'nether' ? ' · Nether' : s.dimension === 'end' ? ' · End' : '';
@@ -139,7 +152,7 @@ $('save').onclick = () => {
   saveNotes();
   attempt(() => activeId = seeds.add({ name: name.trim() || seedIn.value.trim(), seed: seedIn.value.trim(), edition: edIn.value as Edition, version: verIn.value, dimension: dimName(dimIn.value), notes: '' }).id);
   // show the saved world so its notes and visits apply to what's on the map
-  if (generated?.seed !== seedIn.value.trim() || generated?.edition !== edIn.value) generate();
+  if (generated?.seed !== seedIn.value.trim() || generated?.edition !== edIn.value || generated?.version !== verIn.value) generate();
 };
 $('exportSeeds').onclick = () => {
   const url = URL.createObjectURL(new Blob([seeds.exportJson()], { type: 'application/json' }));
