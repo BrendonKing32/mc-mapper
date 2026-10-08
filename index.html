@@ -27,7 +27,15 @@
       <div class="row"><button type="button" id="exportSeeds" class="alt">Export</button><button type="button" id="importBtn" class="alt">Import</button></div>
       <input type="file" id="importSeeds" accept="application/json,.json" hidden />
     </details>
+    <details open><summary>Notes</summary>
+      <p id="notesHint" class="hint">Save this seed to add notes and mark structures as visited.</p>
+      <div id="notesPanel" hidden>
+        <p class="hint">For <b id="notesFor"></b> · <span id="visitedCount"></span></p>
+        <textarea id="notes" rows="6" maxlength="5000" placeholder="Base coords, portal links, things to come back for…"></textarea>
+      </div>
+    </details>
     <details open><summary>Structures</summary>
+      <label class="check"><input type="checkbox" id="hideVisited" /> Hide visited</label>
       <div class="filterGroup"><h4>Overworld</h4><div id="structsOverworld"></div></div>
       <div class="filterGroup"><h4>Nether</h4><div id="structsNether"></div></div>
       <div class="filterGroup"><h4>End</h4><div id="structsEnd"></div></div>

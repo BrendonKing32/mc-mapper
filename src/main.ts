@@ -1,5 +1,5 @@
 import './style.css';
-import { StorageError, createSeedStore, type SavedSeed } from './storage';
+import { StorageError, createSeedStore, structureKey, type SavedSeed } from './storage';
 import { BIOMES } from './data/biomes';
 import { STRUCTURES } from './data/structures';
 import { versionsFor, type Edition } from './data/versions';
@@ -29,9 +29,12 @@ function generate() {
   const edition = edIn.value as Edition;
   const mc = versionsFor(edition).find((v) => v.label === verIn.value)!.mc;
   const { lo, hi } = seedParts(parseSeed(seedIn.value, edition));
+  saveNotes();
+  generated = { seed: seedIn.value.trim(), edition };
   map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[dimName(dimIn.value)]);
   const q = new URLSearchParams({ seed: seedIn.value, edition, version: verIn.value, dimension: dimIn.value });
   history.replaceState(null, '', `?${q}`);
+  refreshActive();
 }
 $('seedForm').onsubmit = (e) => { e.preventDefault(); generate(); };
 dimIn.onchange = () => updateDimStyling();
@@ -60,13 +63,54 @@ function refreshSaved() {
   savedEl.innerHTML = '';
   if (!list.length) savedEl.innerHTML = '<li style="color:var(--muted);cursor:default">No saved seeds yet</li>';
   for (const s of list) savedEl.append(savedRow(s));
+  refreshActive(list);
 }
+
+// --- notes + visited structures, kept on the saved seed matching the map ---
+let activeId: string | null = null;
+let generated: { seed: string; edition: Edition } | null = null;
+const notesIn = $<HTMLTextAreaElement>('notes');
+const hideVisitedIn = $<HTMLInputElement>('hideVisited');
+let selected: { type: number; x: number; z: number } | null = null;
+let notesTimer = 0;
+/** The saved seed for the generated world: the one last loaded/saved if it still matches, else the newest match. */
+function activeSeed(list = seeds.list()): SavedSeed | null {
+  if (!generated) return null;
+  const matches = (s: SavedSeed) => s.seed === generated!.seed && s.edition === generated!.edition;
+  return list.find((s) => s.id === activeId && matches(s)) ?? list.find(matches) ?? null;
+}
+function refreshActive(list = seeds.list()) {
+  const s = activeSeed(list);
+  const changed = (s?.id ?? null) !== activeId;
+  activeId = s?.id ?? null;
+  $('notesHint').hidden = !!s;
+  $('notesPanel').hidden = !s;
+  if (s) {
+    $('notesFor').textContent = s.name;
+    $('visitedCount').textContent = `${s.visited.length} visited`;
+    // don't clobber what the user is typing
+    if (changed || document.activeElement !== notesIn) notesIn.value = s.notes;
+  }
+  map.setVisited(new Set(s?.visited ?? []), hideVisitedIn.checked);
+  renderPick(s);
+}
+function saveNotes() {
+  clearTimeout(notesTimer);
+  const s = activeSeed();
+  if (s && s.notes !== notesIn.value) attempt(() => seeds.setNotes(s.id, notesIn.value));
+}
+notesIn.oninput = () => { clearTimeout(notesTimer); notesTimer = window.setTimeout(saveNotes, 500); };
+notesIn.onblur = saveNotes;
+window.addEventListener('pagehide', saveNotes);
+hideVisitedIn.onchange = () => refreshActive();
 function savedRow(s: SavedSeed) {
   const li = document.createElement('li');
   li.innerHTML = `<div class="meta"><b></b><small></small></div><button title="Rename">✎</button><button title="Delete">✕</button>`;
   li.querySelector('b')!.textContent = s.name;
   const dimLabel = s.dimension === 'nether' ? ' · Nether' : s.dimension === 'end' ? ' · End' : '';
-  li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${dimLabel}`;
+  const visitedLabel = s.visited.length ? ` · ${s.visited.length} visited` : '';
+  li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${dimLabel}${visitedLabel}`;
+  if (s.notes) li.title = s.notes;
   li.onclick = () => load(s);
   const [ren, del] = li.querySelectorAll('button');
   ren.onclick = (e) => {
@@ -80,7 +124,9 @@ function savedRow(s: SavedSeed) {
   };
   return li;
 }
-function load(s: { seed: string; edition: Edition; version: string; dimension?: string }) {
+function load(s: { id?: string; seed: string; edition: Edition; version: string; dimension?: string }) {
+  saveNotes();
+  if (s.id) activeId = s.id;
   seedIn.value = s.seed; edIn.value = s.edition; fillVersions(s.version);
   dimIn.value = dimName(s.dimension);
   updateDimStyling();
@@ -90,7 +136,10 @@ $('save').onclick = () => {
   if (!seedIn.value.trim()) return;
   const name = prompt('Name for this seed', seedIn.value.trim());
   if (name === null) return;
-  attempt(() => seeds.add({ name: name.trim() || seedIn.value.trim(), seed: seedIn.value.trim(), edition: edIn.value as Edition, version: verIn.value, dimension: dimName(dimIn.value), notes: '' }));
+  saveNotes();
+  attempt(() => activeId = seeds.add({ name: name.trim() || seedIn.value.trim(), seed: seedIn.value.trim(), edition: edIn.value as Edition, version: verIn.value, dimension: dimName(dimIn.value), notes: '' }).id);
+  // show the saved world so its notes and visits apply to what's on the map
+  if (generated?.seed !== seedIn.value.trim() || generated?.edition !== edIn.value) generate();
 };
 $('exportSeeds').onclick = () => {
   const url = URL.createObjectURL(new Blob([seeds.exportJson()], { type: 'application/json' }));
@@ -165,13 +214,29 @@ updateDimStyling();
 map.onHover = (x, z, biome) => ($('coords').textContent = `X ${x}  Z ${z}${biome ? ' · ' + biome : ''}`);
 map.onStatus = (m) => ($('status').textContent = m);
 map.onSelect = (f) => {
-  const el = $('pick');
-  el.hidden = !f;
-  if (f) {
-    const def = STRUCTURES.find((s) => s.type === f.type)!;
-    el.innerHTML = `<b>${def.icon} ${def.name}</b><br>X ${f.x}, Z ${f.z}<br><code>/tp @s ${f.x} ~ ${f.z}</code>`;
-  }
+  selected = f;
+  renderPick();
 };
+function renderPick(saved = activeSeed()) {
+  const el = $('pick');
+  const f = selected;
+  el.hidden = !f;
+  if (!f) return;
+  const def = STRUCTURES.find((s) => s.type === f.type)!;
+  el.innerHTML = `<b>${def.icon} ${def.name}</b><br>X ${f.x}, Z ${f.z}<br><code>/tp @s ${f.x} ~ ${f.z}</code>`;
+  if (!saved) {
+    el.insertAdjacentHTML('beforeend', '<p class="hint">Save this seed to mark structures visited.</p>');
+    return;
+  }
+  const key = structureKey(f.type, f.x, f.z);
+  const visited = saved.visited.includes(key);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = visited ? 'done' : '';
+  btn.textContent = visited ? '✓ Visited (undo)' : 'Mark visited';
+  btn.onclick = () => attempt(() => seeds.setVisited(saved.id, key, !visited));
+  el.append(btn);
+}
 $('goto').onsubmit = (e) => {
   e.preventDefault();
   const x = parseInt($<HTMLInputElement>('gx').value), z = parseInt($<HTMLInputElement>('gz').value);

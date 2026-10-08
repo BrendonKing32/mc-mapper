@@ -1,5 +1,6 @@
 import { COLOR_LUT, biomeName } from '../data/biomes';
 import { STRUCTURES } from '../data/structures';
+import { structureKey } from '../storage';
 import { TileCache } from './tileCache';
 
 const TILE = 128;
@@ -35,6 +36,8 @@ export class MapView {
   private ready = false; // true once the generator has initialized (spawn itself may be null, e.g. in the Nether)
   private raf = 0;
   private selected: Found | null = null;
+  private visited = new Set<string>();
+  private hideVisited = false;
   onHover: (x: number, z: number, biome: string) => void = () => {};
   onSelect: (f: Found | null) => void = () => {};
   onStatus: (msg: string) => void = () => {};
@@ -57,6 +60,7 @@ export class MapView {
     this.spawn = null;
     this.ready = false;
     this.selected = null;
+    this.onSelect(null);
     this.worker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim });
     this.structWorker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim, quiet: true });
     this.onStatus('Generating…');
@@ -75,6 +79,17 @@ export class MapView {
     this.queueStructures();
     this.schedule();
   }
+
+  /** Structures to draw as visited (`structureKey()` strings); `hide` leaves them off the map entirely. */
+  setVisited(keys: Set<string>, hide = this.hideVisited) {
+    this.visited = keys;
+    this.hideVisited = hide;
+    if (hide && this.selected && !this.shown(this.selected)) { this.selected = null; this.onSelect(null); }
+    this.schedule();
+  }
+
+  private isVisited(f: Found) { return this.visited.has(structureKey(f.type, f.x, f.z)); }
+  private shown(f: Found) { return this.enabled.has(f.type) && !(this.hideVisited && this.isVisited(f)); }
 
   goTo(x: number, z: number, zoom?: number) {
     this.cx = x; this.cz = z;
@@ -203,17 +218,29 @@ export class MapView {
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const f of this.found) {
-      if (!this.enabled.has(f.type)) continue;
+      if (!this.shown(f)) continue;
       const def = STRUCTURES.find((s) => s.type === f.type)!;
       const [sx, sz] = this.toScreen(f.x, f.z);
       if (sx < -20 || sz < -20 || sx > this.cssW + 20 || sz > this.cssH + 20) continue;
       const sel = this.selected === f;
+      const visited = this.isVisited(f);
       const r = sel ? 13 : 10;
+      ctx.globalAlpha = visited && !sel ? 0.55 : 1;
       ctx.beginPath(); ctx.arc(sx, sz, r, 0, 7);
       ctx.fillStyle = def.color; ctx.fill();
       ctx.lineWidth = sel ? 3 : 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
       ctx.font = `${r * 1.3}px system-ui`;
       ctx.fillText(def.icon, sx, sz + 0.5);
+      ctx.globalAlpha = 1;
+      if (visited) {
+        // green check badge at the marker's lower right
+        const bx = sx + r * 0.75, bz = sz + r * 0.75;
+        ctx.beginPath(); ctx.arc(bx, bz, 5.5, 0, 7);
+        ctx.fillStyle = '#4cc38a'; ctx.fill();
+        ctx.lineWidth = 1; ctx.strokeStyle = '#06140d'; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx - 2.5, bz); ctx.lineTo(bx - 0.5, bz + 2); ctx.lineTo(bx + 2.5, bz - 2);
+        ctx.lineWidth = 1.6; ctx.strokeStyle = '#06140d'; ctx.stroke();
+      }
     }
   }
 
@@ -279,7 +306,7 @@ export class MapView {
   private click(sx: number, sz: number) {
     let best: Found | null = null, bd = 14;
     for (const f of this.found) {
-      if (!this.enabled.has(f.type)) continue;
+      if (!this.shown(f)) continue;
       const [px, pz] = this.toScreen(f.x, f.z);
       const d = Math.hypot(px - sx, pz - sz);
       if (d < bd) { bd = d; best = f; }

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { KEY, LEGACY_KEY, StorageError, createSeedStore } from '../src/storage';
+import { KEY, LEGACY_KEY, MAX_NOTES, StorageError, createSeedStore, structureKey } from '../src/storage';
 
 class MemoryStorage implements Storage {
   map = new Map<string, string>();
@@ -27,6 +27,40 @@ describe('seed store', () => {
     expect(store.list().find((s) => s.id === a.id)?.name).toBe('Renamed');
     store.remove(b.id);
     expect(store.list().map((s) => s.id)).toEqual([a.id]);
+  });
+
+  it('saves notes and toggles visited structures', () => {
+    const store = createSeedStore(mem);
+    const a = store.add(seed);
+    const b = store.add({ ...seed, seed: '2' });
+    expect(a.visited).toEqual([]);
+    store.setNotes(a.id, 'portal at 100 64 -200');
+    store.setNotes(b.id, 'x'.repeat(MAX_NOTES + 10));
+    const village = structureKey(5, -320, 1040);
+    store.setVisited(a.id, village, true);
+    store.setVisited(a.id, village, true);
+    store.setVisited(a.id, structureKey(18, 48, -96), true);
+    let [, got] = store.list();
+    expect(got).toMatchObject({ notes: 'portal at 100 64 -200', visited: ['5:-320:1040', '18:48:-96'] });
+    expect(store.list()[0].notes).toHaveLength(MAX_NOTES);
+    expect(store.list()[0].visited).toEqual([]);
+    store.setVisited(a.id, village, false);
+    [, got] = store.list();
+    expect(got.visited).toEqual(['18:48:-96']);
+  });
+
+  it('keeps notes and visits through export and import', () => {
+    const src = createSeedStore(mem);
+    const a = src.add({ ...seed, notes: 'hi' });
+    src.setVisited(a.id, structureKey(100, 1200, -400), true);
+    const dst = createSeedStore(new MemoryStorage());
+    dst.importJson(src.exportJson());
+    expect(dst.list()[0]).toMatchObject({ notes: 'hi', visited: ['100:1200:-400'] });
+  });
+
+  it('drops malformed visited entries', () => {
+    mem.setItem(KEY, JSON.stringify([{ id: 'y', seed: '1', version: '1.20', visited: ['5:1:2', '5:1:2', 'bad', 7, '-1:0:0'] }]));
+    expect(createSeedStore(mem).list()[0].visited).toEqual(['5:1:2']);
   });
 
   it('ignores malformed stored data', () => {
