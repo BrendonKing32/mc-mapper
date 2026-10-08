@@ -40,6 +40,7 @@ main { flex:1; position:relative; min-width:0; }
 #pick code { user-select:all; }
 #pick button { display:block; width:100%; margin-top:6px; } #pick button.done { background:var(--line); color:var(--text); }
 #pick .hint { margin:6px 0 0; }
+.pickPortal { margin-top:6px; } .pickPortal span { display:block; font-variant-numeric:tabular-nums; }
 .portalRow { align-items:center; margin-bottom:6px; } .portalRow span { width:68px; flex:none; color:var(--muted); font-size:12px; }
 .portalRow input:not([type=checkbox]) { margin-top:0; min-width:0; } .portalShow { margin:6px 0; }
 #notes { resize:vertical; font:inherit; margin-top:0; }
