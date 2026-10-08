@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>MC Mapper</title>
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
-  <aside id="side">
-    <h1>MC Mapper</h1>
+  <aside id="side" aria-label="Seed and filters">
+    <div class="sideHead"><h1>MC Mapper</h1><button type="button" id="closeSide" class="alt iconBtn" aria-label="Close menu">✕</button></div>
     <form id="seedForm">
       <label>Seed <input id="seed" placeholder="number or text" autocomplete="off" required /></label>
       <div class="row">
@@ -50,10 +50,13 @@
       </div>
     </details>
   </aside>
+  <div id="scrim"></div>
   <main>
     <canvas id="map"></canvas>
+    <button type="button" id="openSide" class="iconBtn" aria-label="Open menu" aria-controls="side" aria-expanded="false">☰</button>
+    <div id="zoomBtns"><button type="button" id="zoomIn" class="iconBtn" aria-label="Zoom in">+</button><button type="button" id="zoomOut" class="iconBtn" aria-label="Zoom out">−</button></div>
     <div id="hud"><span id="coords">—</span><span id="status"></span></div>
-    <form id="goto"><input id="gx" placeholder="X" size="6" /><input id="gz" placeholder="Z" size="6" /><button>Go</button><button type="button" id="spawn" class="alt">Spawn</button></form>
+    <form id="goto"><input id="gx" placeholder="X" size="6" aria-label="X" /><input id="gz" placeholder="Z" size="6" aria-label="Z" /><button>Go</button><button type="button" id="spawn" class="alt">Spawn</button></form>
     <div id="pick" hidden></div>
   </main>
   <script type="module" src="/src/main.ts"></script>
