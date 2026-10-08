@@ -5,6 +5,7 @@ Minecraft seed mapper for Cloudflare Workers (static assets). Enter a seed, get 
 - **Generation** runs in the browser: [cubiomes](https://github.com/Cubitect/cubiomes) (MIT, vendored in `vendor/cubiomes`) compiled to WASM (`public/wasm/cubiomes.wasm`, committed) and run in two Web Workers (tiles / structures).
 - **Saved seeds** live in the browser's `localStorage` (`src/storage.ts`). There is no server, so nobody else can see or change them, but they don't sync between browsers or devices. Use **Export** to download them as JSON and **Import** to load that file elsewhere. If the browser refuses to save (storage full, disabled, private mode), the sidebar shows the reason.
 - **Notes and visited structures** belong to a saved seed: once the seed on the map is saved, the sidebar's **Notes** box saves as you type, and clicking a structure lets you **Mark visited** (shown with a green check; **Hide visited** removes them from the map). They are included in Export/Import.
+- **Nether portal calculator**: type Overworld or Nether X/Z in the sidebar to get the matching spot in the other dimension (X/Z ÷ 8, rounded down like the game; Y unchanged). **Use map center** fills it from the map, and **Show Overworld / Show Nether** jump the map there.
 - **Seed input**: numbers (64-bit signed) or text (hashed with Java `String.hashCode`, like the game).
 
 ## Develop

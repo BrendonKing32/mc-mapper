@@ -34,6 +34,14 @@
         <textarea id="notes" aria-label="Seed notes" rows="6" maxlength="5000" placeholder="Base coords, portal links, things to come back for…"></textarea>
       </div>
     </details>
+    <details open><summary>Nether portal</summary>
+      <p class="hint">Type either side to get the matching spot. X and Z scale by 8; Y stays the same.</p>
+      <div class="row portalRow"><span>Overworld</span><input id="owX" placeholder="X" inputmode="numeric" aria-label="Overworld X" /><input id="owZ" placeholder="Z" inputmode="numeric" aria-label="Overworld Z" /></div>
+      <div class="row portalRow"><span>Nether</span><input id="neX" placeholder="X" inputmode="numeric" aria-label="Nether X" /><input id="neZ" placeholder="Z" inputmode="numeric" aria-label="Nether Z" /></div>
+      <div class="row"><button type="button" id="portalCenter" class="alt">Use map center</button></div>
+      <div class="row portalShow"><button type="button" id="showOw" class="alt">Show Overworld</button><button type="button" id="showNe" class="alt">Show Nether</button></div>
+      <p class="hint">Build the portal there for a clean link: the game connects to any existing portal within 128 blocks in the Overworld or 16 in the Nether.</p>
+    </details>
     <details open><summary>Structures</summary>
       <label class="check"><input type="checkbox" id="hideVisited" /> Hide visited</label>
       <div class="filterGroup"><h4>Overworld</h4><div id="structsOverworld"></div></div>
