@@ -19,10 +19,19 @@ void mc_init(int mc, uint32_t seed_lo, uint32_t seed_hi, int large, int dim)
     applySeed(&g, dim, g_seed);
 }
 
+// Block height biomes are sampled at. Since 1.18 the Overworld picks cave biomes (lush caves,
+// dripstone, deep dark) by depth below the terrain, so sampling at sea level returns caves
+// under any land above y=63. Sampling above the build limit always yields the surface biome.
+// Older versions and the other dimensions ignore y; keep sea level there.
+static int sample_y(void)
+{
+    return (g_dim == DIM_OVERWORLD && g_mc >= MC_1_18) ? 320 : 63;
+}
+
 // Generates w*h biome ids at 1:scale; returns malloc'd int buffer (free with mc_free).
 int *mc_biomes(int x, int z, int w, int h, int scale)
 {
-    Range r = { scale, x, z, w, h, 63 / (scale == 1 ? 1 : 4), 1 };
+    Range r = { scale, x, z, w, h, sample_y() / (scale == 1 ? 1 : 4), 1 };
     int *cache = allocCache(&g, r);
     if (!cache) return 0;
     if (genBiomes(&g, cache, r) != 0) { free(cache); return 0; }
@@ -31,7 +40,7 @@ int *mc_biomes(int x, int z, int w, int h, int scale)
 
 int mc_biome_at(int x, int z)
 {
-    return getBiomeAt(&g, 1, x, 63, z);
+    return getBiomeAt(&g, 1, x, sample_y(), z);
 }
 
 // Writes up to max (x,z) int pairs of viable structures in block rect; returns count.

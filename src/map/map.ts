@@ -2,6 +2,7 @@ import { COLOR_LUT, biomeName } from '../data/biomes';
 import { STRUCTURES } from '../data/structures';
 import { structureKey } from '../storage';
 import { TileCache } from './tileCache';
+import { pinch, zoomAt, type View } from './view';
 
 const TILE = 128;
 const SCALES = [1, 4, 16, 64, 256];
@@ -261,31 +262,59 @@ export class MapView {
   }
   private pendingStatus() { return 'Generating…'; }
 
+  /** Zoom around the viewport centre (for the +/− buttons). */
+  zoomBy(factor: number) { this.setView(zoomAt(this.view, { x: this.cssW / 2, y: this.cssH / 2 }, factor, this.cssW, this.cssH)); }
+
+  private get view(): View { return { cx: this.cx, cz: this.cz, zoom: this.zoom }; }
+  private setView(v: View) {
+    this.cx = v.cx; this.cz = v.cz; this.zoom = v.zoom;
+    this.schedule(); this.queueStructures();
+  }
+
   private bindInput() {
     const c = this.canvas;
-    let drag: { x: number; z: number; moved: boolean } | null = null;
-    c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); drag = { x: e.offsetX, z: e.offsetY, moved: false }; });
+    // One pointer pans, two pinch-zoom. A tap is a single pointer that went down and up without moving.
+    const pts = new Map<number, { x: number; y: number }>();
+    let tap = false;
+    const pos = (e: PointerEvent) => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    c.addEventListener('pointerdown', (e) => {
+      c.setPointerCapture(e.pointerId);
+      pts.set(e.pointerId, pos(e));
+      tap = pts.size === 1;
+    });
     c.addEventListener('pointermove', (e) => {
-      if (drag) {
-        const dx = e.offsetX - drag.x, dz = e.offsetY - drag.z;
-        if (Math.abs(dx) + Math.abs(dz) > 3) drag.moved = true;
-        this.cx -= dx / this.zoom; this.cz -= dz / this.zoom;
-        drag.x = e.offsetX; drag.z = e.offsetY;
-        this.schedule(); this.queueStructures();
+      const p = pos(e);
+      const prev = pts.get(e.pointerId);
+      if (!prev) { if (e.pointerType === 'mouse') this.hover(p.x, p.y); return; }
+      if (pts.size === 1) {
+        const dx = p.x - prev.x, dy = p.y - prev.y;
+        if (!tap || Math.abs(dx) + Math.abs(dy) > 3) {
+          tap = false;
+          this.setView({ cx: this.cx - dx / this.zoom, cz: this.cz - dy / this.zoom, zoom: this.zoom });
+          pts.set(e.pointerId, p);
+        }
+        if (e.pointerType === 'mouse') this.hover(p.x, p.y);
+      } else if (pts.size === 2) {
+        const [a, b] = [...pts.entries()];
+        const other = a[0] === e.pointerId ? b[1] : a[1];
+        this.setView(pinch(this.view, [prev, other], [p, other], this.cssW, this.cssH));
+        pts.set(e.pointerId, p);
       }
-      this.hover(e.offsetX, e.offsetY);
     });
-    c.addEventListener('pointerup', (e) => {
-      if (drag && !drag.moved) this.click(e.offsetX, e.offsetY);
-      drag = null;
-    });
+    const end = (e: PointerEvent) => {
+      if (!pts.delete(e.pointerId)) return;
+      if (tap && e.type === 'pointerup') {
+        const p = pos(e);
+        this.click(p.x, p.y, e.pointerType === 'mouse' ? 14 : 26);
+        this.hover(p.x, p.y);
+      }
+      tap = false;
+    };
+    c.addEventListener('pointerup', end);
+    c.addEventListener('pointercancel', end);
     c.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const [wx, wz] = this.toWorld(e.offsetX, e.offsetY);
-      this.zoom = Math.min(8, Math.max(1 / 256, this.zoom * Math.exp(-e.deltaY * 0.0015)));
-      this.cx = wx - (e.offsetX - this.cssW / 2) / this.zoom;
-      this.cz = wz - (e.offsetY - this.cssH / 2) / this.zoom;
-      this.schedule(); this.queueStructures();
+      this.setView(zoomAt(this.view, { x: e.offsetX, y: e.offsetY }, Math.exp(-e.deltaY * 0.0015), this.cssW, this.cssH));
     }, { passive: false });
   }
 
@@ -303,8 +332,8 @@ export class MapView {
     this.onHover(Math.floor(x), Math.floor(z), name);
   }
 
-  private click(sx: number, sz: number) {
-    let best: Found | null = null, bd = 14;
+  private click(sx: number, sz: number, radius: number) {
+    let best: Found | null = null, bd = radius;
     for (const f of this.found) {
       if (!this.shown(f)) continue;
       const [px, pz] = this.toScreen(f.x, f.z);

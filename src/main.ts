@@ -36,7 +36,7 @@ function generate() {
   history.replaceState(null, '', `?${q}`);
   refreshActive();
 }
-$('seedForm').onsubmit = (e) => { e.preventDefault(); generate(); };
+$('seedForm').onsubmit = (e) => { e.preventDefault(); generate(); setSideOpen(false); };
 dimIn.onchange = () => updateDimStyling();
 
 // --- saved seeds (this browser only) ---
@@ -124,7 +124,7 @@ function savedRow(s: SavedSeed) {
   const visitedLabel = s.visited.length ? ` · ${s.visited.length} visited` : '';
   li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${dimLabel}${visitedLabel}`;
   if (s.notes) li.title = s.notes;
-  li.onclick = () => load(s);
+  li.onclick = () => { load(s); setSideOpen(false); };
   const [ren, del] = li.querySelectorAll('button');
   ren.onclick = (e) => {
     e.stopPropagation();
@@ -194,7 +194,7 @@ map.setStructures(new Set(structOn));
 const biomeOn = new Set<number>();
 const biomeEl = $('biomes');
 const biomeEls: Record<DimName, HTMLElement> = { overworld: $('biomesOverworld'), nether: $('biomesNether'), end: $('biomesEnd') };
-const biomeRows = BIOMES.map((b) => {
+const biomeRows = BIOMES.filter((b) => !b.underground).map((b) => {
   const l = document.createElement('label');
   l.className = 'opt';
   l.dataset.name = b.name.toLowerCase();
@@ -222,6 +222,17 @@ function updateDimStyling() {
   for (const r of [...structRows, ...biomeRows]) r.classList.toggle('otherDim', r.dataset.dim !== dim);
 }
 updateDimStyling();
+
+// --- drawer (phones only; the classes have no effect on wide screens) ---
+const openBtn = $('openSide');
+function setSideOpen(open: boolean) {
+  document.body.classList.toggle('sideOpen', open);
+  openBtn.setAttribute('aria-expanded', String(open));
+}
+openBtn.onclick = () => setSideOpen(true);
+$('closeSide').onclick = () => setSideOpen(false);
+$('scrim').onclick = () => setSideOpen(false);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setSideOpen(false); });
 
 // --- HUD ---
 map.onHover = (x, z, biome) => ($('coords').textContent = `X ${x}  Z ${z}${biome ? ' · ' + biome : ''}`);
@@ -256,8 +267,12 @@ $('goto').onsubmit = (e) => {
   if (!isNaN(x) && !isNaN(z)) map.goTo(x, z);
 };
 $('spawn').onclick = () => map.goToSpawn();
+$('zoomIn').onclick = () => map.zoomBy(2);
+$('zoomOut').onclick = () => map.zoomBy(0.5);
 
 // --- boot: seed from URL, else first saved ---
 refreshSaved();
 const q = new URLSearchParams(location.search);
-if (q.get('seed')) load({ seed: q.get('seed')!, edition: (q.get('edition') as Edition) || 'java', version: q.get('version') || '', dimension: q.get('dimension') || '' });
+// With nothing to show yet, start with the drawer open so the seed box is visible on phones.
+if (!q.get('seed')) setSideOpen(true);
+else load({ seed: q.get('seed')!, edition: (q.get('edition') as Edition) || 'java', version: q.get('version') || '', dimension: q.get('dimension') || '' });
