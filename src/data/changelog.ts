@@ -6,6 +6,15 @@ export type ChangelogEntry = { id: string; date: string; title: string; items: s
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-08-bedrock-estimates',
+    date: '2026-10-08',
+    title: 'Clearer Bedrock accuracy warnings',
+    items: [
+      'Bedrock generation now requires acknowledging that map and structure results are estimates.',
+      'Structure filters unavailable in the selected generator version are disabled.',
+    ],
+  },
+  {
     id: '2026-10-08-whats-new',
     date: '2026-10-08',
     title: "What's new",

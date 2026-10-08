@@ -11,6 +11,7 @@ button { padding:7px 10px; background:var(--accent); color:#06140d; border:0; bo
 button:disabled { opacity:.45; cursor:default; }
 button.alt { background:var(--line); color:var(--text); }
 .note { color:#e0b050; font-size:12px; }
+#bedrockAckWrap[hidden] { display:none; }
 .note.error { color:#ff7b72; }
 .hint { color:var(--muted); font-size:12px; margin:0 0 6px; }
 #saved + .row { margin-top:6px; }
