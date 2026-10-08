@@ -6,6 +6,16 @@ export type ChangelogEntry = { id: string; date: string; title: string; items: s
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-08-pins',
+    date: '2026-10-08',
+    title: 'Pins',
+    items: [
+      'Drop your own pins on the map: tap the 📍 button and then the map, or right-click the map.',
+      'Pins belong to a saved seed and remember their dimension. Click one for its coords, /tp command and portal coords, or to rename or remove it.',
+      'The Pins section in the sidebar lists them all; click one to jump there. They are included in Export/Import.',
+    ],
+  },
+  {
     id: '2026-10-08-bedrock-structures',
     date: '2026-10-08',
     title: 'Real Bedrock structure positions',

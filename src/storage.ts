@@ -1,16 +1,23 @@
 import { currentVersionLabel, type Edition } from './data/versions';
 
 export type Dimension = 'overworld' | 'nether' | 'end';
+/** A spot the user marked on the map, in one dimension of a saved seed. */
+export type Pin = { id: string; name: string; x: number; z: number; dimension: Dimension; created_at: number };
 export type SavedSeed = {
   id: string; name: string; seed: string; edition: Edition; version: string; dimension: Dimension; notes: string;
   /** Structures marked as visited, as `structureKey()` strings. */
   visited: string[];
+  pins: Pin[];
   created_at: number;
 };
-export type NewSeed = Omit<SavedSeed, 'id' | 'created_at' | 'visited'> & { visited?: string[] };
+export type NewSeed = Omit<SavedSeed, 'id' | 'created_at' | 'visited' | 'pins'> & { visited?: string[]; pins?: Pin[] };
 
 export const MAX_NOTES = 5000;
 export const MAX_VISITED = 5000;
+export const MAX_PINS = 1000;
+export const MAX_PIN_NAME = 60;
+/** Minecraft's world border; pins outside it are dropped. */
+const WORLD_LIMIT = 30_000_000;
 /** Identifies a structure within a seed: cubiomes type plus block position (types are unique per dimension). */
 export const structureKey = (type: number, x: number, z: number) => `${type}:${x}:${z}`;
 const KEY_RE = /^\d+:-?\d+:-?\d+$/;
@@ -22,6 +29,23 @@ export const LEGACY_KEY = 'mc-mapper:seeds';
 export class StorageError extends Error {}
 
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : '');
+const dimension = (v: unknown): Dimension => (v === 'nether' || v === 'end' ? v : 'overworld');
+const coord = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && Math.abs(v) <= WORLD_LIMIT ? v : null);
+const pinName = (v: unknown) => str(v, 200).trim().slice(0, MAX_PIN_NAME);
+
+function normalizePin(v: unknown): Pin | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const x = coord(o.x), z = coord(o.z);
+  if (x === null || z === null || typeof o.id !== 'string' || !o.id) return null;
+  return {
+    id: o.id.slice(0, 100),
+    name: pinName(o.name) || 'Pin',
+    x, z,
+    dimension: dimension(o.dimension),
+    created_at: typeof o.created_at === 'number' && Number.isFinite(o.created_at) ? o.created_at : Date.now(),
+  };
+}
 
 /** Returns a cleaned record, or null if the entry is not a usable saved seed. */
 export function normalize(v: unknown): SavedSeed | null {
@@ -30,16 +54,20 @@ export function normalize(v: unknown): SavedSeed | null {
   const seed = str(o.seed, 100).trim();
   const version = currentVersionLabel(str(o.version, 40));
   if (!seed || !version || typeof o.id !== 'string' || !o.id) return null;
+  const seen = new Set<string>(); // pin ids
   return {
     id: o.id,
     name: str(o.name, 100).trim() || seed,
     seed,
     edition: o.edition === 'bedrock' ? 'bedrock' : 'java',
     version,
-    dimension: o.dimension === 'nether' || o.dimension === 'end' ? o.dimension : 'overworld',
+    dimension: dimension(o.dimension),
     notes: str(o.notes, MAX_NOTES),
     visited: Array.isArray(o.visited)
       ? [...new Set(o.visited.filter((k): k is string => typeof k === 'string' && KEY_RE.test(k)))].slice(0, MAX_VISITED)
+      : [],
+    pins: Array.isArray(o.pins)
+      ? o.pins.map(normalizePin).filter((p): p is Pin => !!p && !seen.has(p.id) && !!seen.add(p.id)).slice(0, MAX_PINS)
       : [],
     created_at: typeof o.created_at === 'number' && Number.isFinite(o.created_at) ? o.created_at : Date.now(),
   };
@@ -107,6 +135,22 @@ export function createSeedStore(storage: Storage | null = defaultStorage()) {
         if (visited && rest.length >= MAX_VISITED) throw new StorageError(`You can mark at most ${MAX_VISITED} structures as visited per seed.`);
         return { ...s, visited: visited ? [...rest, key] : rest };
       }));
+    },
+    addPin(id: string, p: { name: string; x: number; z: number; dimension: Dimension }): Pin {
+      const pin = normalizePin({ ...p, id: crypto.randomUUID(), created_at: Date.now() });
+      if (!pin) throw new StorageError('Pins must be within the world border.');
+      write(list().map((s) => {
+        if (s.id !== id) return s;
+        if (s.pins.length >= MAX_PINS) throw new StorageError(`You can have at most ${MAX_PINS} pins per seed.`);
+        return { ...s, pins: [...s.pins, pin] };
+      }));
+      return pin;
+    },
+    renamePin(id: string, pinId: string, name: string) {
+      write(list().map((s) => (s.id !== id ? s : { ...s, pins: s.pins.map((p) => (p.id === pinId ? { ...p, name: pinName(name) || p.name } : p)) })));
+    },
+    removePin(id: string, pinId: string) {
+      write(list().map((s) => (s.id !== id ? s : { ...s, pins: s.pins.filter((p) => p.id !== pinId) })));
     },
     remove(id: string) {
       write(list().filter((s) => s.id !== id));

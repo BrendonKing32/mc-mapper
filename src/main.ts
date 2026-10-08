@@ -1,7 +1,7 @@
 import './style.css';
 import { createChangelogSeen } from './changelog';
 import { CHANGELOG } from './data/changelog';
-import { StorageError, createSeedStore, structureKey, type SavedSeed } from './storage';
+import { StorageError, createSeedStore, structureKey, type Pin, type SavedSeed } from './storage';
 import { BIOMES } from './data/biomes';
 import { STRUCTURES } from './data/structures';
 import { currentVersionLabel, versionsFor, type Edition } from './data/versions';
@@ -69,7 +69,7 @@ function attempt(fn: () => void, refresh = true) {
 function refreshSaved() {
   const list = seeds.list();
   savedEl.innerHTML = '';
-  if (!list.length) savedEl.innerHTML = '<li style="color:var(--muted);cursor:default">No saved seeds yet</li>';
+  if (!list.length) savedEl.innerHTML = '<li class="empty">No saved seeds yet</li>';
   for (const s of list) savedEl.append(savedRow(s));
   refreshActive(list);
 }
@@ -102,12 +102,14 @@ function refreshActive(list = seeds.list()) {
   $('notesPanel').hidden = !s;
   if (s) {
     $('notesFor').textContent = s.name;
-    $('visitedCount').textContent = `${s.visited.length} visited`;
+    $('visitedCount').textContent = `${s.visited.length} visited · ${s.pins.length} pin${s.pins.length === 1 ? '' : 's'}`;
     // don't clobber what the user is typing
     if (s.id !== notesOwner || document.activeElement !== notesIn) notesIn.value = s.notes;
   }
   notesOwner = s?.id ?? null;
   map.setVisited(new Set(s?.visited ?? []), hideVisitedIn.checked);
+  map.setPins(s && shownDim ? s.pins.filter((p) => p.dimension === shownDim) : []);
+  renderPins(s);
   renderPick(s);
 }
 function saveNotes() {
@@ -130,7 +132,8 @@ function savedRow(s: SavedSeed) {
   li.querySelector('b')!.textContent = s.name;
   const dimLabel = s.dimension === 'nether' ? ' · Nether' : s.dimension === 'end' ? ' · End' : '';
   const visitedLabel = s.visited.length ? ` · ${s.visited.length} visited` : '';
-  li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${dimLabel}${visitedLabel}`;
+  const pinsLabel = s.pins.length ? ` · ${s.pins.length} pin${s.pins.length === 1 ? '' : 's'}` : '';
+  li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${dimLabel}${visitedLabel}${pinsLabel}`;
   if (s.notes) li.title = s.notes;
   li.onclick = () => { load(s); setSideOpen(false); };
   const [ren, del] = li.querySelectorAll('button');
@@ -179,6 +182,80 @@ importIn.onchange = async () => {
   attempt(() => { added = seeds.importJson(text); });
   if (!savedMsg.classList.contains('error')) showSavedMsg(added ? `Imported ${added} seed${added === 1 ? '' : 's'}.` : 'No new seeds in that file.');
 };
+
+// --- pins, kept on the saved seed matching the map ---
+const pinBtn = $<HTMLButtonElement>('pinBtn');
+const pinTip = $('pinTip');
+const pinsEl = $('pins');
+let pinMode = false;
+let selectedPin: string | null = null;
+let pinTipTimer = 0;
+const DIM_LABEL: Record<DimName, string> = { overworld: 'Overworld', nether: 'Nether', end: 'End' };
+function showPinTip(msg: string, ms = 0) {
+  clearTimeout(pinTipTimer);
+  pinTip.textContent = msg;
+  pinTip.hidden = !msg;
+  if (msg && ms) pinTipTimer = window.setTimeout(() => showPinTip(''), ms);
+}
+function setPinMode(on: boolean) {
+  if (on && !activeSeed()) { showPinTip('Save this seed to drop pins.', 3000); on = false; }
+  else showPinTip(on ? 'Tap the map to drop a pin · Esc to cancel' : '');
+  pinMode = on;
+  pinBtn.setAttribute('aria-pressed', String(on));
+  map.setPinMode(on);
+}
+pinBtn.onclick = () => setPinMode(!pinMode);
+map.onPlace = (x, z) => {
+  setPinMode(false);
+  const s = activeSeed();
+  if (!s || !shownDim) return showPinTip('Save this seed to drop pins.', 3000);
+  const name = prompt(`Name this pin (X ${x}, Z ${z})`, 'Pin');
+  if (name === null) return;
+  let pin: Pin | null = null;
+  attempt(() => { pin = seeds.addPin(s.id, { name, x, z, dimension: shownDim! }); });
+  if (pin) map.selectPin((pin as Pin).id);
+};
+map.onSelectPin = (id) => {
+  selectedPin = id;
+  renderPick();
+};
+function renamePin(s: SavedSeed, p: Pin) {
+  const name = prompt('Rename pin', p.name);
+  if (name?.trim()) attempt(() => seeds.renamePin(s.id, p.id, name));
+}
+function removePin(s: SavedSeed, p: Pin) {
+  if (confirm(`Remove pin "${p.name}"?`)) attempt(() => seeds.removePin(s.id, p.id));
+}
+/** Shows a pin, switching the map to its dimension first if needed. */
+function goToPin(p: Pin) {
+  setSideOpen(false);
+  if (shownDim !== p.dimension) {
+    dimIn.value = p.dimension;
+    updateDimStyling();
+    generate({ x: p.x, z: p.z });
+  } else map.goTo(p.x, p.z);
+  map.selectPin(p.id);
+}
+function renderPins(s: SavedSeed | null) {
+  $('pinsHint').hidden = !!s;
+  $('pinsPanel').hidden = !s;
+  pinsEl.innerHTML = '';
+  if (!s) return;
+  if (!s.pins.length) pinsEl.innerHTML = '<li class="empty">No pins yet</li>';
+  // pins in the dimension on the map first
+  const pins = [...s.pins].sort((a, b) => Number(b.dimension === shownDim) - Number(a.dimension === shownDim));
+  for (const p of pins) {
+    const li = document.createElement('li');
+    li.innerHTML = `<div class="meta"><b></b><small></small></div><button title="Rename">✎</button><button title="Remove">✕</button>`;
+    li.querySelector('b')!.textContent = `📍 ${p.name}`;
+    li.querySelector('small')!.textContent = `X ${p.x}, Z ${p.z}${p.dimension === shownDim ? '' : ` · ${DIM_LABEL[p.dimension]}`}`;
+    li.onclick = () => goToPin(p);
+    const [ren, del] = li.querySelectorAll('button');
+    ren.onclick = (e) => { e.stopPropagation(); renamePin(s, p); };
+    del.onclick = (e) => { e.stopPropagation(); removePin(s, p); };
+    pinsEl.append(li);
+  }
+}
 
 // --- nether portal calculator ---
 const owX = $<HTMLInputElement>('owX'), owZ = $<HTMLInputElement>('owZ');
@@ -289,7 +366,7 @@ function setSideOpen(open: boolean) {
 openBtn.onclick = () => setSideOpen(true);
 $('closeSide').onclick = () => setSideOpen(false);
 $('scrim').onclick = () => setSideOpen(false);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setSideOpen(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setSideOpen(false); if (pinMode) setPinMode(false); } });
 
 // --- what's new ---
 const changelog = createChangelogSeen(CHANGELOG, seeds.list().length > 0);
@@ -337,12 +414,14 @@ map.onSelect = (f) => {
 };
 function renderPick(saved = activeSeed()) {
   const el = $('pick');
+  const pin = selectedPin ? saved?.pins.find((p) => p.id === selectedPin) : undefined;
+  if (saved && pin) return renderPinPick(el, saved, pin);
   const f = selected;
   el.hidden = !f;
   if (!f) return;
   const def = STRUCTURES.find((s) => s.type === f.type)!;
   el.innerHTML = `<b>${def.icon} ${def.name}</b><br>X ${f.x}, Z ${f.z}<br><code>/tp @s ${f.x} ~ ${f.z}</code>`;
-  if (def.dim !== 1) el.append(portalPick(f, def.dim === -1 ? 'nether' : 'overworld'));
+  if (def.dim !== 1) el.append(portalPick(structureKey(f.type, f.x, f.z), f, def.dim === -1 ? 'nether' : 'overworld'));
   if (!saved) {
     el.insertAdjacentHTML('beforeend', '<p class="hint">Save this seed to mark structures visited.</p>');
     return;
@@ -356,11 +435,27 @@ function renderPick(saved = activeSeed()) {
   btn.onclick = () => attempt(() => seeds.setVisited(saved.id, key, !visited));
   el.append(btn);
 }
-/** Structure whose portal coordinates are showing in the popup, so re-renders (e.g. Mark visited) keep them. */
+function renderPinPick(el: HTMLElement, saved: SavedSeed, p: Pin) {
+  el.hidden = false;
+  el.innerHTML = `<b></b><br>X ${p.x}, Z ${p.z}<br><code>/tp @s ${p.x} ~ ${p.z}</code>`;
+  el.querySelector('b')!.textContent = `📍 ${p.name}`;
+  if (p.dimension !== 'end') el.append(portalPick(`pin:${p.id}`, p, p.dimension));
+  const row = document.createElement('div');
+  row.className = 'row';
+  for (const [label, fn] of [['Rename', renamePin], ['Remove', removePin]] as const) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'alt';
+    btn.textContent = label;
+    btn.onclick = () => fn(saved, p);
+    row.append(btn);
+  }
+  el.append(row);
+}
+/** Structure or pin whose portal coordinates are showing in the popup, so re-renders (e.g. Mark visited) keep them. */
 let portalShownFor: string | null = null;
-/** "Portal coords" button for the selected structure; once clicked, the matching spot in the other dimension. */
-function portalPick(f: { type: number; x: number; z: number }, from: 'overworld' | 'nether') {
-  const key = structureKey(f.type, f.x, f.z);
+/** "Portal coords" button for the selected marker; once clicked, the matching spot in the other dimension. */
+function portalPick(key: string, f: { x: number; z: number }, from: 'overworld' | 'nether') {
   const to = from === 'overworld' ? 'nether' : 'overworld';
   const wrap = document.createElement('div');
   wrap.className = 'pickPortal';

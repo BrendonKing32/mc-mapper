@@ -13,6 +13,9 @@ const MAX_STRUCT_SPAN = 24000; // blocks; beyond this structure queries are skip
 
 type Tile = { ids: Uint8Array; canvas?: HTMLCanvasElement; filterVer: number };
 type Found = { type: number; x: number; z: number };
+type MapPin = { id: string; name: string; x: number; z: number };
+const PIN_COLOR = '#ff5c8a';
+const PIN_HEAD = 18; // screen px from the pin's tip (the marked block) up to the centre of its head
 
 export class MapView {
   private ctx: CanvasRenderingContext2D;
@@ -40,8 +43,14 @@ export class MapView {
   private selected: Found | null = null;
   private visited = new Set<string>();
   private hideVisited = false;
+  private pins: MapPin[] = [];
+  private selectedPin: string | null = null;
+  private placing = false;
   onHover: (x: number, z: number, biome: string) => void = () => {};
   onSelect: (f: Found | null) => void = () => {};
+  onSelectPin: (id: string | null) => void = () => {};
+  /** A block the user chose for a new pin (a tap in pin mode, or a right-click). */
+  onPlace: (x: number, z: number) => void = () => {};
   onStatus: (msg: string) => void = () => {};
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -64,6 +73,7 @@ export class MapView {
     this.ready = false;
     this.selected = null;
     this.onSelect(null);
+    this.selectPin(null);
     this.worker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim, bedrock });
     this.structWorker.postMessage({ op: 'init', gen: this.gen, mc, lo, hi, large, dim, bedrock, quiet: true });
     this.onStatus('Generating…');
@@ -89,6 +99,27 @@ export class MapView {
     this.hideVisited = hide;
     if (hide && this.selected && !this.shown(this.selected)) { this.selected = null; this.onSelect(null); }
     this.schedule();
+  }
+
+  /** Pins to draw (already filtered to the dimension on the map). */
+  setPins(pins: MapPin[]) {
+    this.pins = pins;
+    if (this.selectedPin && !pins.some((p) => p.id === this.selectedPin)) this.selectPin(null);
+    this.schedule();
+  }
+
+  /** Highlights a pin (null clears it) and reports the change through onSelectPin. */
+  selectPin(id: string | null) {
+    if (id && this.selected) { this.selected = null; this.onSelect(null); }
+    this.selectedPin = id;
+    this.onSelectPin(id);
+    this.schedule();
+  }
+
+  /** While on, the next tap on the map places a pin instead of selecting. */
+  setPinMode(on: boolean) {
+    this.placing = on;
+    this.canvas.classList.toggle('placing', on);
   }
 
   private isVisited(f: Found) { return this.visited.has(structureKey(f.type, f.x, f.z)); }
@@ -249,6 +280,32 @@ export class MapView {
         ctx.lineWidth = 1.6; ctx.strokeStyle = '#06140d'; ctx.stroke();
       }
     }
+    this.drawPins(ctx);
+  }
+
+  private drawPins(ctx: CanvasRenderingContext2D) {
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = '600 12px system-ui';
+    ctx.lineJoin = 'round';
+    for (const p of this.pins) {
+      const [sx, sz] = this.toScreen(p.x + 0.5, p.z + 0.5);
+      if (sx < -150 || sz < -10 || sx > this.cssW + 20 || sz > this.cssH + 40) continue;
+      const sel = p.id === this.selectedPin;
+      const r = sel ? 9 : 7, hz = sz - PIN_HEAD;
+      // teardrop: a circle with its sides running down to the tip at the marked block
+      const a = Math.acos(r / PIN_HEAD); // where the sides meet the head tangentially
+      ctx.beginPath();
+      ctx.moveTo(sx, sz);
+      ctx.arc(sx, hz, r, Math.PI / 2 + a, Math.PI / 2 - a);
+      ctx.closePath();
+      ctx.fillStyle = PIN_COLOR; ctx.fill();
+      ctx.lineWidth = sel ? 2.5 : 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(sx, hz, r * 0.38, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = '#000c';
+      ctx.strokeText(p.name, sx + r + 4, hz);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(p.name, sx + r + 4, hz);
+    }
   }
 
   private queueStructures() {
@@ -309,7 +366,7 @@ export class MapView {
     });
     const end = (e: PointerEvent) => {
       if (!pts.delete(e.pointerId)) return;
-      if (tap && e.type === 'pointerup') {
+      if (tap && e.type === 'pointerup' && e.button !== 2) {
         const p = pos(e);
         this.click(p.x, p.y, e.pointerType === 'mouse' ? 14 : 26);
         this.hover(p.x, p.y);
@@ -318,6 +375,10 @@ export class MapView {
     };
     c.addEventListener('pointerup', end);
     c.addEventListener('pointercancel', end);
+    c.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.place(e.offsetX, e.offsetY);
+    });
     c.addEventListener('wheel', (e) => {
       e.preventDefault();
       this.setView(zoomAt(this.view, { x: e.offsetX, y: e.offsetY }, Math.exp(-e.deltaY * 0.0015), this.cssW, this.cssH));
@@ -338,7 +399,22 @@ export class MapView {
     this.onHover(Math.floor(x), Math.floor(z), name);
   }
 
+  private place(sx: number, sz: number) {
+    const [x, z] = this.toWorld(sx, sz);
+    this.onPlace(Math.floor(x), Math.floor(z));
+  }
+
   private click(sx: number, sz: number, radius: number) {
+    if (this.placing) return this.place(sx, sz);
+    // pins are drawn on top, so they win; their head sits above the marked block
+    let pin: MapPin | null = null, pd = radius;
+    for (const p of this.pins) {
+      const [px, pz] = this.toScreen(p.x + 0.5, p.z + 0.5);
+      const d = Math.min(Math.hypot(px - sx, pz - PIN_HEAD - sz), Math.hypot(px - sx, pz - PIN_HEAD / 2 - sz));
+      if (d < pd) { pd = d; pin = p; }
+    }
+    if (pin) return this.selectPin(pin.id);
+    if (this.selectedPin) this.selectPin(null);
     let best: Found | null = null, bd = radius;
     for (const f of this.found) {
       if (!this.shown(f)) continue;

@@ -15,11 +15,12 @@ button.alt { background:var(--line); color:var(--text); }
 .hint { color:var(--muted); font-size:12px; margin:0 0 6px; }
 #saved + .row { margin-top:6px; }
 details { margin-top:14px; } summary { cursor:pointer; font-weight:600; margin-bottom:6px; }
-#saved { list-style:none; margin:0; padding:0; }
-#saved li { display:flex; align-items:center; gap:6px; padding:6px; border-radius:6px; cursor:pointer; }
-#saved li:hover { background:var(--line); }
-#saved .meta { flex:1; min-width:0; } #saved .meta b, #saved .meta small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#saved small { color:var(--muted); } #saved button { flex:none; padding:2px 7px; background:transparent; color:var(--muted); }
+ul.list { list-style:none; margin:0; padding:0; }
+.list li { display:flex; align-items:center; gap:6px; padding:6px; border-radius:6px; cursor:pointer; }
+.list li:hover { background:var(--line); }
+.list .meta { flex:1; min-width:0; } .list .meta b, .list .meta small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.list small { color:var(--muted); } .list button { flex:none; padding:2px 7px; background:transparent; color:var(--muted); }
+.list li.empty { color:var(--muted); cursor:default; } .list li.empty:hover { background:none; }
 .opt { display:flex; align-items:center; gap:7px; padding:2px 0; font-size:13px; color:var(--text); }
 .opt i { width:12px; height:12px; border-radius:3px; display:inline-block; border:1px solid #0006; flex:none; }
 .opt.otherDim { opacity:.4; }
@@ -37,6 +38,9 @@ main { flex:1; position:relative; min-width:0; }
 #openSide, #closeSide, #scrim { display:none; }
 #zoomBtns { position:absolute; right:10px; top:62px; display:flex; flex-direction:column; gap:6px; }
 #zoomBtns button { background:#000a; color:var(--text); border:1px solid var(--line); }
+#zoomBtns #pinBtn { font-size:17px; } #zoomBtns #pinBtn[aria-pressed=true] { background:#ff5c8a; border-color:#fff; }
+#map.placing { cursor:crosshair; }
+#pinTip { position:absolute; left:50%; top:10px; transform:translateX(-50%); background:#000c; padding:6px 10px; border-radius:6px; font-size:13px; max-width:calc(100% - 20px); }
 #pick { position:absolute; right:10px; bottom:10px; background:#000c; padding:8px 12px; border-radius:8px; }
 #pick code { user-select:all; }
 #pick button { display:block; width:100%; margin-top:6px; } #pick button.done { background:var(--line); color:var(--text); }
@@ -72,13 +76,14 @@ main { flex:1; position:relative; min-width:0; }
   .iconBtn { width:44px; height:44px; padding:0; }
   .opt { padding:7px 0; font-size:15px; }
   .opt input, .check input { width:20px; height:20px; margin:0; }
-  #saved li { padding:8px 4px; }
-  #saved button { padding:8px 12px; font-size:16px; }
+  .list li { padding:8px 4px; }
+  .list button { padding:8px 12px; font-size:16px; }
   #biomes { max-height:none; }
   #goto { left:calc(62px + env(safe-area-inset-left)); right:calc(10px + env(safe-area-inset-right)); top:calc(10px + env(safe-area-inset-top)); padding:4px; }
   #goto input { width:auto; flex:1; min-width:0; padding:8px 6px; }
   #goto button { padding:8px 10px; }
   #zoomBtns { right:calc(10px + env(safe-area-inset-right)); top:calc(66px + env(safe-area-inset-top)); }
   #hud { left:calc(10px + env(safe-area-inset-left)); right:calc(10px + env(safe-area-inset-right)); bottom:calc(10px + env(safe-area-inset-bottom)); flex-wrap:wrap; gap:4px 12px; }
+  #pinTip { top:calc(62px + env(safe-area-inset-top)); }
   #pick { left:calc(10px + env(safe-area-inset-left)); right:calc(10px + env(safe-area-inset-right)); bottom:calc(52px + env(safe-area-inset-bottom)); }
 }
