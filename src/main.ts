@@ -4,7 +4,7 @@ import { CHANGELOG } from './data/changelog';
 import { StorageError, createSeedStore, structureKey, type SavedSeed } from './storage';
 import { BIOMES } from './data/biomes';
 import { STRUCTURES } from './data/structures';
-import { versionsFor, type Edition } from './data/versions';
+import { currentVersionLabel, versionsFor, type Edition } from './data/versions';
 import { MapView } from './map/map';
 import { parseCoord, toNether, toOverworld } from './portal';
 import { parseSeed, seedParts } from './seed';
@@ -24,6 +24,7 @@ function fillVersions(selected?: string) {
   verIn.innerHTML = vs.map((v) => `<option value="${v.label}">${v.label}</option>`).join('');
   if (selected && vs.some((v) => v.label === selected)) verIn.value = selected;
   $('note').hidden = edIn.value !== 'bedrock';
+  document.body.dataset.edition = edIn.value;
 }
 edIn.onchange = () => fillVersions();
 fillVersions();
@@ -33,11 +34,11 @@ let shownDim: DimName | null = null;
 function generate(at: { x: number; z: number } | null = null) {
   const edition = edIn.value as Edition;
   const mc = versionsFor(edition).find((v) => v.label === verIn.value)!.mc;
-  const { lo, hi } = seedParts(parseSeed(seedIn.value, edition));
+  const { lo, hi } = seedParts(parseSeed(seedIn.value));
   saveNotes();
   generated = { seed: seedIn.value.trim(), edition, version: verIn.value };
   shownDim = dimName(dimIn.value);
-  map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[shownDim], at);
+  map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[shownDim], at, edition === 'bedrock');
   const q = new URLSearchParams({ seed: seedIn.value, edition, version: verIn.value, dimension: dimIn.value });
   history.replaceState(null, '', `?${q}`);
   refreshActive();
@@ -147,7 +148,7 @@ function savedRow(s: SavedSeed) {
 function load(s: { id?: string; seed: string; edition: Edition; version: string; dimension?: string }) {
   saveNotes();
   if (s.id) activeId = s.id;
-  seedIn.value = s.seed; edIn.value = s.edition; fillVersions(s.version);
+  seedIn.value = s.seed; edIn.value = s.edition; fillVersions(currentVersionLabel(s.version));
   dimIn.value = dimName(s.dimension);
   updateDimStyling();
   generate();
@@ -236,6 +237,7 @@ const structRows = STRUCTURES.map((s) => {
   const l = document.createElement('label');
   l.className = 'opt';
   l.dataset.dim = String(s.dim ?? 0);
+  if (s.bedrockApprox) l.dataset.approx = '';
   l.innerHTML = `<input type="checkbox" ${structOn.has(s.type) ? 'checked' : ''}><i style="background:${s.color}"></i>${s.icon} ${s.name}`;
   l.querySelector('input')!.onchange = (e) => {
     (e.target as HTMLInputElement).checked ? structOn.add(s.type) : structOn.delete(s.type);

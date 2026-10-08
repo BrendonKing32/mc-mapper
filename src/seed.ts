@@ -1,5 +1,3 @@
-import type { Edition } from './data/versions';
-
 /** Java's String.hashCode — what the game applies to non-numeric seed text. */
 export function javaHash(s: string): number {
   let h = 0;
@@ -7,13 +5,13 @@ export function javaHash(s: string): number {
   return h;
 }
 
-/** Parses seed input the way the game does. Returns signed 64-bit (Java) or 32-bit (Bedrock) as BigInt. */
-export function parseSeed(input: string, edition: Edition): bigint {
+/**
+ * Parses seed input the way the game does, as a signed 64-bit BigInt. Since 1.18 Bedrock seeds are 64-bit too
+ * (its structures and Nether/End only use the low 32 bits, which the generator handles).
+ */
+export function parseSeed(input: string): bigint {
   const t = input.trim();
-  let v: bigint;
-  if (/^-?\d+$/.test(t)) v = BigInt.asIntN(64, BigInt(t));
-  else v = BigInt(javaHash(t));
-  return edition === 'bedrock' ? BigInt.asIntN(32, v) : v;
+  return /^-?\d+$/.test(t) ? BigInt.asIntN(64, BigInt(t)) : BigInt(javaHash(t));
 }
 
 export function seedParts(seed: bigint): { lo: number; hi: number } {

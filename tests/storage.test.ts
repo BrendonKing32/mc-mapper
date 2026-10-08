@@ -18,6 +18,11 @@ let mem: MemoryStorage;
 beforeEach(() => { mem = new MemoryStorage(); });
 
 describe('seed store', () => {
+  it('maps old "(approx.)" Bedrock version labels to the current ones', () => {
+    const store = createSeedStore(mem);
+    const a = store.add({ ...seed, edition: 'bedrock', version: '1.20 (approx.)' });
+    expect(store.list().find((s) => s.id === a.id)?.version).toBe('1.20');
+  });
   it('adds, renames and removes seeds', () => {
     const store = createSeedStore(mem);
     const a = store.add(seed);
