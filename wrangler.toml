@@ -9,3 +9,6 @@ command = "npm run build"
 
 [assets]
 directory = "./dist"
+
+# Workers Builds runs `wrangler preview` for non-production branches, which needs this block (empty is fine).
+[previews]
