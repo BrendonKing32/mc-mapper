@@ -1,6 +1,7 @@
 // `mc` values are cubiomes' MCVersion enum ids (vendor/cubiomes/biomes.h).
 export type Edition = 'java' | 'bedrock';
 export const JAVA_VERSIONS = [
+  { label: '26.3', mc: 28, approximate: true },
   { label: '1.21 (Winter Drop)', mc: 28 }, { label: '1.21.3', mc: 27 }, { label: '1.21.1', mc: 26 },
   { label: '1.20', mc: 25 }, { label: '1.19.4', mc: 24 }, { label: '1.19.2', mc: 23 },
   { label: '1.18', mc: 22 }, { label: '1.17', mc: 21 }, { label: '1.16.5', mc: 20 },
@@ -10,6 +11,7 @@ export const JAVA_VERSIONS = [
 ];
 // Bedrock biomes use the matching Java generator (same since 1.18); structures use Bedrock placement. See README.
 export const BEDROCK_VERSIONS = [
+  { label: '26.52', mc: 28, approximate: true },
   { label: '1.21+', mc: 28 }, { label: '1.20', mc: 25 }, { label: '1.18', mc: 22 },
 ];
 /** Bedrock labels used to end in " (approx.)"; maps those (in saved seeds and links) to the current ones. */

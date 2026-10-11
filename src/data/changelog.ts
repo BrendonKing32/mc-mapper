@@ -6,6 +6,15 @@ export type ChangelogEntry = { id: string; date: string; title: string; items: s
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-10-current-versions',
+    date: '2026-10-10',
+    title: 'Current Minecraft versions',
+    items: [
+      'Java 26.3 and Bedrock 26.52 are now available in the version selectors.',
+      'Until the generator supports these releases, maps use the closest available 1.21 Winter Drop data and may miss newer terrain or structure changes.',
+    ],
+  },
+  {
     id: '2026-10-08-pins',
     date: '2026-10-08',
     title: 'Pins',

@@ -19,14 +19,28 @@ type DimName = 'overworld' | 'nether' | 'end';
 const DIM_OF: Record<DimName, -1 | 0 | 1> = { overworld: 0, nether: -1, end: 1 };
 const dimName = (d: unknown): DimName => (d === 'nether' || d === 'end' ? d : 'overworld');
 
+function updateVersionNote() {
+  const vs = versionsFor(edIn.value as Edition);
+  const versionNote = vs.find((v) => v.label === verIn.value)?.approximate
+    ? 'The latest release uses the closest available generator (Minecraft 1.21 Winter Drop); newer terrain or structure changes may not appear.'
+    : '';
+  const bedrockNote = edIn.value === 'bedrock'
+    ? "Bedrock Overworld biomes use Java generation; structures use Bedrock's own placement. Spawn, strongholds and ones marked ≈ are approximate, as are Nether and End biomes."
+    : '';
+  const note = $('note');
+  note.textContent = [versionNote, bedrockNote].filter(Boolean).join(' ');
+  note.hidden = !versionNote && !bedrockNote;
+}
+
 function fillVersions(selected?: string) {
   const vs = versionsFor(edIn.value as Edition);
   verIn.innerHTML = vs.map((v) => `<option value="${v.label}">${v.label}</option>`).join('');
   if (selected && vs.some((v) => v.label === selected)) verIn.value = selected;
-  $('note').hidden = edIn.value !== 'bedrock';
+  updateVersionNote();
   document.body.dataset.edition = edIn.value;
 }
 edIn.onchange = () => fillVersions();
+verIn.onchange = updateVersionNote;
 fillVersions();
 
 /** Dimension of the world on the map (the select can be changed without regenerating). */
