@@ -1,17 +1,20 @@
 import { COLOR_LUT, biomeName } from '../data/biomes';
 import { STRUCTURES } from '../data/structures';
 import { structureKey } from '../storage';
+import { NEUTRAL } from './terrain';
 import { TileCache } from './tileCache';
 import { pinch, zoomAt, type View } from './view';
 
 const TILE = 128;
 const SCALES = [1, 4, 16, 64, 256];
 const MAX_INFLIGHT = 6;
-// ~80 KB per tile (16 KB biome ids + 128x128 RGBA canvas), so ~40 MB. Visible tiles are always kept.
+// ~80 KB per tile (16 KB biome ids + 128x128 RGBA canvas), so ~40 MB; terrain adds 48 KB (shade + heights).
+// Visible tiles are always kept.
 const TILE_BUDGET = 512;
 const MAX_STRUCT_SPAN = 24000; // blocks; beyond this structure queries are skipped
 
-type Tile = { ids: Uint8Array; canvas?: HTMLCanvasElement; filterVer: number };
+type Terrain = { shade: Uint8Array; height: Int16Array };
+type Tile = { ids: Uint8Array; terrain: Terrain | null; canvas?: HTMLCanvasElement; filterVer: number };
 type Found = { type: number; x: number; z: number };
 type MapPin = { id: string; name: string; x: number; z: number };
 const PIN_COLOR = '#ff5c8a';
@@ -46,7 +49,10 @@ export class MapView {
   private pins: MapPin[] = [];
   private selectedPin: string | null = null;
   private placing = false;
-  onHover: (x: number, z: number, biome: string) => void = () => {};
+  private terrain = false;
+  private dim = 0;
+  /** Biome name and approximate surface height (null when unknown) under the pointer. */
+  onHover: (x: number, z: number, biome: string, y: number | null) => void = () => {};
   onSelect: (f: Found | null) => void = () => {};
   onSelectPin: (id: string | null) => void = () => {};
   /** A block the user chose for a new pin (a tap in pin mode, or a right-click). */
@@ -64,6 +70,7 @@ export class MapView {
 
   setWorld(mc: number, lo: number, hi: number, large = false, dim = 0, at: { x: number; z: number } | null = null, bedrock = false) {
     this.gen++;
+    this.dim = dim;
     this.startAt = at;
     this.tiles.clear();
     this.pending.clear();
@@ -79,6 +86,16 @@ export class MapView {
     this.onStatus('Generating…');
     this.cx = 0; this.cz = 0;
   }
+
+  /** Shades tiles by approximate terrain height. There is no height map for the Nether, so it stays flat there. */
+  setTerrain(on: boolean) {
+    this.terrain = on;
+    this.schedule();
+  }
+
+  /** Whether terrain shading can show for the world on the map. */
+  get terrainAvailable() { return this.dim !== -1; }
+  private get shading() { return this.terrain && this.terrainAvailable; }
 
   setBiomeFilter(ids: Set<number>) {
     this.biomeFilter = ids;
@@ -151,7 +168,7 @@ export class MapView {
       this.onStatus('');
     } else if (m.op === 'tile') {
       this.pending.delete(m.key);
-      this.tiles.set(m.key, { ids: m.ids, filterVer: -1 });
+      this.tiles.set(m.key, { ids: m.ids, terrain: m.terrain, filterVer: -1 });
       this.schedule();
     } else if (m.op === 'structures') {
       if (m.key !== this.structKey) return;
@@ -182,6 +199,9 @@ export class MapView {
     if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.draw(); });
   }
 
+  // Shaded and flat tiles are cached separately, so toggling back and forth doesn't regenerate.
+  private tileKey(scale: number, tx: number, tz: number) { return `${scale}:${tx}:${tz}${this.shading ? ':t' : ''}`; }
+
   private pickScale() {
     // largest scale whose tile pixels are still >= ~1 screen px per sample
     let s = SCALES[0];
@@ -195,9 +215,11 @@ export class MapView {
     c.width = c.height = TILE;
     const img = new ImageData(TILE, TILE);
     const f = this.biomeFilter;
+    const shade = t.terrain?.shade;
     for (let i = 0; i < t.ids.length; i++) {
       const id = t.ids[i];
       let r = COLOR_LUT[id * 3], g = COLOR_LUT[id * 3 + 1], b = COLOR_LUT[id * 3 + 2];
+      if (shade) { const k = shade[i] / NEUTRAL; r *= k; g *= k; b *= k; }
       if (f.size && !f.has(id)) { const y = (r + g + b) / 3 * 0.35; r = g = b = y; }
       img.data.set([r, g, b, 255], i * 4);
     }
@@ -222,9 +244,10 @@ export class MapView {
     const tz0 = Math.floor(wz0 / span), tz1 = Math.floor(wz1 / span);
     const wanted: { key: string; tx: number; tz: number }[] = [];
     const visible = (tx1 - tx0 + 1) * (tz1 - tz0 + 1);
+    const terrain = this.shading;
     for (let tz = tz0; tz <= tz1; tz++)
       for (let tx = tx0; tx <= tx1; tx++) {
-        const key = `${scale}:${tx}:${tz}`;
+        const key = this.tileKey(scale, tx, tz);
         const t = this.tiles.get(key);
         if (t) {
           const [sx, sz] = this.toScreen(tx * span, tz * span);
@@ -239,7 +262,7 @@ export class MapView {
     wanted.sort((a, b) => Math.hypot(a.tx - ccx, a.tz - ccz) - Math.hypot(b.tx - ccx, b.tz - ccz));
     for (const w of wanted.slice(0, Math.max(0, MAX_INFLIGHT - this.pending.size))) {
       this.pending.add(w.key);
-      this.worker.postMessage({ op: 'tile', gen: this.gen, key: w.key, x: w.tx * TILE, z: w.tz * TILE, size: TILE, scale });
+      this.worker.postMessage({ op: 'tile', gen: this.gen, key: w.key, x: w.tx * TILE, z: w.tz * TILE, size: TILE, scale, terrain });
     }
     this.drawOverlays(ctx);
   }
@@ -389,14 +412,15 @@ export class MapView {
     const [x, z] = this.toWorld(sx, sz);
     const scale = this.pickScale();
     const span = TILE * scale;
-    const t = this.tiles.get(`${scale}:${Math.floor(x / span)}:${Math.floor(z / span)}`);
-    let name = '';
+    const t = this.tiles.get(this.tileKey(scale, Math.floor(x / span), Math.floor(z / span)));
+    let name = '', y: number | null = null;
     if (t) {
       const ix = Math.floor((x - Math.floor(x / span) * span) / scale);
       const iz = Math.floor((z - Math.floor(z / span) * span) / scale);
       name = biomeName(t.ids[iz * TILE + ix]);
+      if (t.terrain) y = t.terrain.height[iz * TILE + ix];
     }
-    this.onHover(Math.floor(x), Math.floor(z), name);
+    this.onHover(Math.floor(x), Math.floor(z), name, y);
   }
 
   private place(sx: number, sz: number) {

@@ -5,6 +5,7 @@
 #include "finders.h"
 
 static Generator g;
+static SurfaceNoise g_sn;
 static int g_mc;
 static uint64_t g_seed;
 static int g_dim;
@@ -23,6 +24,7 @@ void mc_init(int mc, uint32_t seed_lo, uint32_t seed_hi, int large, int dim, int
     setupGenerator(&g, mc, large ? LARGE_BIOMES : 0);
     uint64_t gen_seed = (bedrock && dim != DIM_OVERWORLD) ? (uint64_t)(int64_t)(int32_t)seed_lo : g_seed;
     applySeed(&g, dim, gen_seed);
+    initSurfaceNoise(&g_sn, dim, gen_seed);
 }
 
 // Block height biomes are sampled at. Since 1.18 the Overworld picks cave biomes (lush caves,
@@ -42,6 +44,59 @@ int *mc_biomes(int x, int z, int w, int h, int scale)
     if (!cache) return 0;
     if (genBiomes(&g, cache, r) != 0) { free(cache); return 0; }
     return cache;
+}
+
+// Bilinear sample of a gw-wide grid at fractional position (fx, fz); the caller keeps it in range.
+static float grid_at(const float *q, int gw, float fx, float fz)
+{
+    int ix = (int)fx, iz = (int)fz;
+    float tx = fx - ix, tz = fz - iz;
+    const float *r0 = q + iz * gw + ix, *r1 = r0 + gw;
+    return (r0[0] * (1 - tx) + r0[1] * tx) * (1 - tz) + (r1[0] * (1 - tx) + r1[1] * tx) * tz;
+}
+
+// Approximate surface height (blocks) for w*h samples at 1:scale, same layout as mc_biomes; returns
+// a malloc'd float buffer (free with mc_free), or 0 where cubiomes has no height map (the Nether).
+// The End reads 0 over the void. cubiomes computes heights at 1:4, so scale 1 interpolates between
+// 1:4 cells, and larger scales take the 1:4 cell in each sample's middle. Beyond 1:4 only every
+// `step`th sample is computed and the rest interpolated, which keeps far-out tiles quick: every 2nd
+// from 1.18, and sparser before 1.18 and in the End, where a lone cell costs far more (a surface
+// noise search plus a biome search, or a noise column).
+float *mc_heights(int x, int z, int w, int h, int scale)
+{
+    if (g_dim == DIM_NETHER) return 0;
+    float *y = malloc(sizeof(float) * w * h);
+    if (!y) return 0;
+    float *q;
+    int gw, gh;
+    if (scale == 1) {
+        // 1:4 cells covering the block area plus one more each way; cell qx+i is centred on block 4*(qx+i)+2
+        int qx = floordiv(x - 2, 4), qz = floordiv(z - 2, 4);
+        gw = floordiv(x + w - 3, 4) - qx + 2; gh = floordiv(z + h - 3, 4) - qz + 2;
+        q = malloc(sizeof(float) * gw * gh);
+        if (!q || mapApproxHeight(q, 0, &g, &g_sn, qx, qz, gw, gh) != 0) { free(q); free(y); return 0; }
+        for (int j = 0; j < h; j++)
+            for (int i = 0; i < w; i++)
+                y[j * w + i] = grid_at(q, gw, (x + i - 2) / 4.0f - qx, (z + j - 2) / 4.0f - qz);
+    } else {
+        int f = scale / 4;
+        int step = g_dim == DIM_END ? (f == 1 ? 1 : 8) : g_mc < MC_1_18 ? 4 : f == 1 ? 1 : 2;
+        gw = (w - 1) / step + 2; gh = (h - 1) / step + 2;
+        q = malloc(sizeof(float) * gw * gh);
+        if (!q) { free(y); return 0; }
+        if (step == 1 && f == 1) { // contiguous 1:4 cells: one call
+            if (mapApproxHeight(q, 0, &g, &g_sn, x, z, gw, gh) != 0) { free(q); free(y); return 0; }
+        } else for (int b = 0; b < gh; b++)
+            for (int a = 0; a < gw; a++)
+                if (mapApproxHeight(q + b * gw + a, 0, &g, &g_sn, (x + a * step) * f + f / 2, (z + b * step) * f + f / 2, 1, 1) != 0) {
+                    free(q); free(y); return 0;
+                }
+        for (int j = 0; j < h; j++)
+            for (int i = 0; i < w; i++)
+                y[j * w + i] = grid_at(q, gw, (float)i / step, (float)j / step);
+    }
+    free(q);
+    return y;
 }
 
 int mc_biome_at(int x, int z)

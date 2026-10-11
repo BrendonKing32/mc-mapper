@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { shadeTile } from '../map/terrain';
 const wasmUrl = '/wasm/cubiomes.wasm';
 
 type Exports = {
@@ -6,6 +7,7 @@ type Exports = {
   _initialize?: () => void;
   mc_init(mc: number, lo: number, hi: number, large: number, dim: number, bedrock: number): void;
   mc_biomes(x: number, z: number, w: number, h: number, scale: number): number;
+  mc_heights(x: number, z: number, w: number, h: number, scale: number): number;
   mc_biome_at(x: number, z: number): number;
   mc_structures(type: number, x0: number, z0: number, x1: number, z1: number, out: number, max: number): number;
   mc_spawn(out: number): void;
@@ -40,6 +42,15 @@ function strongholdsNear(out: number, x0: number, z0: number, x1: number, z1: nu
     if (x >= x0 && x <= x1 && z >= z0 && z <= z1) res.push(x, z);
   }
   return res;
+}
+/** Shading for a tile, from heights with a one-sample border; null where there's no height map (the Nether). */
+function terrainFor(x: number, z: number, size: number, scale: number) {
+  const n = size + 2;
+  const p = ex.mc_heights(x - 1, z - 1, n, n, scale);
+  if (!p) return null;
+  const h = new Float32Array(ex.memory.buffer, p, n * n).slice();
+  ex.mc_free(p);
+  return shadeTile(h, size, scale, dim);
 }
 const readPairs = (ptr: number, n: number) => Array.from(new Int32Array(ex.memory.buffer, ptr, n * 2));
 
@@ -79,7 +90,9 @@ function handle(m: any) {
         for (let i = 0; i < n; i++) ids[i] = src[i];
         ex.mc_free(p);
       }
-      self.postMessage({ op: 'tile', gen: m.gen, key: m.key, ids }, { transfer: [ids.buffer] });
+      const terrain = m.terrain ? terrainFor(m.x, m.z, m.size, m.scale) : null;
+      const transfer = terrain ? [ids.buffer, terrain.shade.buffer, terrain.height.buffer] : [ids.buffer];
+      self.postMessage({ op: 'tile', gen: m.gen, key: m.key, ids, terrain }, { transfer });
       break;
     }
     case 'structures': {

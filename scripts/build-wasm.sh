@@ -11,7 +11,7 @@ C=vendor/cubiomes
 mkdir -p public/wasm
 "$SDK/bin/clang" -O3 -DNDEBUG -I$C -mexec-model=reactor -nostartfiles \
   -Wl,--no-entry -Wl,--export-dynamic -Wl,--initial-memory=33554432 -Wl,--max-memory=1073741824 -Wl,--allow-undefined \
-  -Wl,--export=mc_init -Wl,--export=mc_biomes -Wl,--export=mc_biome_at -Wl,--export=mc_structures \
+  -Wl,--export=mc_init -Wl,--export=mc_biomes -Wl,--export=mc_heights -Wl,--export=mc_biome_at -Wl,--export=mc_structures \
   -Wl,--export=mc_spawn -Wl,--export=mc_strongholds -Wl,--export=mc_is_slime -Wl,--export=mc_malloc -Wl,--export=mc_free \
   wasm/wrapper.c $C/generator.c $C/biomes.c $C/layers.c $C/biomenoise.c $C/noise.c $C/finders.c $C/util.c \
   -o public/wasm/cubiomes.wasm

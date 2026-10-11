@@ -38,6 +38,8 @@ main { flex:1; position:relative; min-width:0; }
 #openSide, #closeSide, #scrim { display:none; }
 #zoomBtns { position:absolute; right:10px; top:62px; display:flex; flex-direction:column; gap:6px; }
 #zoomBtns button { background:#000a; color:var(--text); border:1px solid var(--line); }
+#zoomBtns #terrainBtn { font-size:18px; } #zoomBtns #terrainBtn[aria-pressed=true] { background:#4a7a4f; border-color:#fff; }
+#zoomBtns #terrainBtn:disabled { opacity:.4; }
 #zoomBtns #pinBtn { font-size:17px; } #zoomBtns #pinBtn[aria-pressed=true] { background:#ff5c8a; border-color:#fff; }
 #map.placing { cursor:crosshair; }
 #pinTip { position:absolute; left:50%; top:10px; transform:translateX(-50%); background:#000c; padding:6px 10px; border-radius:6px; font-size:13px; max-width:calc(100% - 20px); }

@@ -39,6 +39,7 @@ function generate(at: { x: number; z: number } | null = null) {
   generated = { seed: seedIn.value.trim(), edition, version: verIn.value };
   shownDim = dimName(dimIn.value);
   map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[shownDim], at, edition === 'bedrock');
+  refreshTerrainBtn();
   const q = new URLSearchParams({ seed: seedIn.value, edition, version: verIn.value, dimension: dimIn.value });
   history.replaceState(null, '', `?${q}`);
   refreshActive();
@@ -205,6 +206,25 @@ function setPinMode(on: boolean) {
   map.setPinMode(on);
 }
 pinBtn.onclick = () => setPinMode(!pinMode);
+
+// --- terrain shading (a per-browser preference) ---
+const TERRAIN_KEY = 'mc-mapper:terrain';
+const terrainBtn = $<HTMLButtonElement>('terrainBtn');
+let terrainOn = (() => { try { return localStorage.getItem(TERRAIN_KEY) === '1'; } catch { return false; } })();
+function refreshTerrainBtn() {
+  const ok = map.terrainAvailable;
+  terrainBtn.disabled = !ok;
+  terrainBtn.setAttribute('aria-pressed', String(terrainOn && ok));
+  terrainBtn.title = ok ? 'Terrain shading (approximate heights)' : 'No terrain shading in the Nether';
+}
+terrainBtn.onclick = () => {
+  terrainOn = !terrainOn;
+  try { localStorage.setItem(TERRAIN_KEY, terrainOn ? '1' : '0'); } catch { /* not remembered; still works */ }
+  map.setTerrain(terrainOn);
+  refreshTerrainBtn();
+};
+map.setTerrain(terrainOn);
+refreshTerrainBtn();
 map.onPlace = (x, z) => {
   setPinMode(false);
   const s = activeSeed();
@@ -406,7 +426,8 @@ changelogDlg.onclick = (e) => { if (e.target === changelogDlg) changelogDlg.clos
 refreshWhatsNewDot();
 
 // --- HUD ---
-map.onHover = (x, z, biome) => ($('coords').textContent = `X ${x}  Z ${z}${biome ? ' · ' + biome : ''}`);
+map.onHover = (x, z, biome, y) =>
+  ($('coords').textContent = `X ${x}  Z ${z}${y !== null ? `  Y≈${y}` : ''}${biome ? ' · ' + biome : ''}`);
 map.onStatus = (m) => ($('status').textContent = m);
 map.onSelect = (f) => {
   selected = f;

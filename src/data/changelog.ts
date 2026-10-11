@@ -6,6 +6,16 @@ export type ChangelogEntry = { id: string; date: string; title: string; items: s
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-11-terrain',
+    date: '2026-10-11',
+    title: 'Terrain shading',
+    items: [
+      'Tap the ⛰ button by the zoom controls to shade the map by terrain height: hills and mountains get relief, and oceans darken with depth.',
+      'With it on, the coordinates under the pointer include the approximate surface height (Y≈).',
+      'Works in the Overworld and the End (where the islands now stand out from the void). The Nether has no height map, so it stays flat.',
+    ],
+  },
+  {
     id: '2026-10-08-pins',
     date: '2026-10-08',
     title: 'Pins',
