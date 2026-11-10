@@ -6,6 +6,16 @@ export type ChangelogEntry = { id: string; date: string; title: string; items: s
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-09-generator-26-1-2',
+    date: '2026-11-09',
+    title: 'Updated biome generator',
+    items: [
+      'Java versions through 26.1.2 now use updated generation data, including the expanded Pale Gardens and woodland mansions in Pale Gardens from 1.21.5.',
+      'Java 26.3 and Bedrock 26.52 use this newer generator as an approximation; newer biomes and structures are still unsupported.',
+      'Saved seeds and links for older versions keep their original generators; the latest-release approximations use the updated data.',
+    ],
+  },
+  {
     id: '2026-10-10-current-versions',
     date: '2026-10-10',
     title: 'Current Minecraft versions',

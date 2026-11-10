@@ -6,6 +6,7 @@ enum MCVersion
 {   // MC_1_X refers to the latest patch of the respective 1.X release.
     // NOTE: Development effort focuses on just the newest patch for each major
     // release. Minor releases and major versions <= 1.0 are experimental.
+    // Starting with 26.1, Minecraft adopted a "year.drop.hotfix" version scheme.
     MC_UNDEF,
     MC_B1_7,
     MC_B1_8,
@@ -34,9 +35,19 @@ enum MCVersion
     MC_1_20_6, MC_1_20 = MC_1_20_6,
     MC_1_21_1,
     MC_1_21_3,
-    MC_1_21_WD, // Winter Drop, version TBA
-    MC_1_21 = MC_1_21_WD,
-    MC_NEWEST = MC_1_21,
+    MC_1_21_4,                       // Garden Awakens (Pale Garden); formerly MC_1_21_WD
+    MC_1_21_WD = MC_1_21_4,          // legacy alias retained for source compatibility
+    MC_1_21_5,                       // Spring to Life: pale_garden expansion + mansions in pale_garden
+    MC_1_21_6,                       // Chase the Skies (no world-gen impact)
+    MC_1_21_7,                       // hotfix
+    MC_1_21_8,                       // hotfix
+    MC_1_21_9,                       // hotfix
+    MC_1_21_10,                      // hotfix
+    MC_1_21_11, MC_1_21 = MC_1_21_11,
+    MC_26_1,                         // Tiny Takeover (no world-gen impact)
+    MC_26_1_1,                       // hotfix
+    MC_26_1_2,                       // hotfix
+    MC_NEWEST = MC_26_1_2,
 };
 
 enum Dimension
