@@ -32,6 +32,7 @@ main { flex:1; position:relative; min-width:0; }
 #map { display:block; cursor:grab; touch-action:none; } #map:active { cursor:grabbing; }
 #hud { position:absolute; left:10px; bottom:10px; background:#000a; padding:5px 9px; border-radius:6px; display:flex; gap:12px; font-variant-numeric:tabular-nums; }
 #status { color:#e0b050; }
+#shareStatus { color:var(--muted); }
 #goto { position:absolute; right:10px; top:10px; display:flex; gap:6px; background:#000a; padding:6px; border-radius:8px; }
 #goto input { width:70px; margin:0; } #goto button { flex:none; }
 .iconBtn { flex:none; width:36px; height:36px; padding:0; font-size:20px; line-height:1; display:grid; place-items:center; }
