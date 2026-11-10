@@ -75,15 +75,36 @@ const char* mc2str(int mc)
     case MC_1_20:   return "1.20"; break;
     case MC_1_21_1: return "1.21.1"; break;
     case MC_1_21_3: return "1.21.3"; break;
-    case MC_1_21_WD: return "1.21 WD"; break;
+    case MC_1_21_4: return "1.21.4"; break;
+    case MC_1_21_5: return "1.21.5"; break;
+    case MC_1_21_6: return "1.21.6"; break;
+    case MC_1_21_7: return "1.21.7"; break;
+    case MC_1_21_8: return "1.21.8"; break;
+    case MC_1_21_9: return "1.21.9"; break;
+    case MC_1_21_10: return "1.21.10"; break;
+    case MC_1_21:   return "1.21"; break;
+    case MC_26_1:   return "26.1"; break;
+    case MC_26_1_1: return "26.1.1"; break;
+    case MC_26_1_2: return "26.1.2"; break;
     default:        return "?";
     }
 }
 
 int str2mc(const char *s)
 {
+    if (!strcmp(s, "26.1.2"))   return MC_26_1_2;
+    if (!strcmp(s, "26.1.1"))   return MC_26_1_1;
+    if (!strcmp(s, "26.1"))     return MC_26_1;
     if (!strcmp(s, "1.21"))     return MC_1_21;
-    if (!strcmp(s, "1.21 WD"))  return MC_1_21_WD;
+    if (!strcmp(s, "1.21.11"))  return MC_1_21_11;
+    if (!strcmp(s, "1.21.10"))  return MC_1_21_10;
+    if (!strcmp(s, "1.21.9"))   return MC_1_21_9;
+    if (!strcmp(s, "1.21.8"))   return MC_1_21_8;
+    if (!strcmp(s, "1.21.7"))   return MC_1_21_7;
+    if (!strcmp(s, "1.21.6"))   return MC_1_21_6;
+    if (!strcmp(s, "1.21.5"))   return MC_1_21_5;
+    if (!strcmp(s, "1.21.4"))   return MC_1_21_4;
+    if (!strcmp(s, "1.21 WD"))  return MC_1_21_4; // backwards compatibility
     if (!strcmp(s, "1.21.3"))   return MC_1_21_3;
     if (!strcmp(s, "1.21.2"))   return MC_1_21_3; // backwards compatibility
     if (!strcmp(s, "1.21.1"))   return MC_1_21_1;

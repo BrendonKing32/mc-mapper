@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { LATEST_GENERATOR } from '../src/data/versions';
 
 // Runs the real WASM generator (public/wasm/cubiomes.wasm).
 const { instance } = await WebAssembly.instantiate(readFileSync(new URL('../public/wasm/cubiomes.wasm', import.meta.url)), {
@@ -9,8 +10,8 @@ const { instance } = await WebAssembly.instantiate(readFileSync(new URL('../publ
 const ex = instance.exports as any;
 ex._initialize?.();
 
-function structures(type: number, seed: number, bedrock: boolean, r: number, dim = 0): string[] {
-  ex.mc_init(28, seed >>> 0, seed < 0 ? 0xffffffff : 0, 0, dim, bedrock ? 1 : 0);
+function structures(type: number, seed: number, bedrock: boolean, r: number, dim = 0, mc = LATEST_GENERATOR.mc): string[] {
+  ex.mc_init(mc, seed >>> 0, seed < 0 ? 0xffffffff : 0, 0, dim, bedrock ? 1 : 0);
   const out = ex.mc_malloc(4096 * 8);
   const n = ex.mc_structures(type, -r, -r, r, r, out, 4096);
   const xs = n > 0 ? Array.from(new Int32Array(ex.memory.buffer, out, n * 2)) : [];
@@ -27,8 +28,8 @@ describe('Bedrock structure placement', () => {
   const real = ['-168,56', '744,-344', '-312,-1000', '744,-872', '248,1144', '-312,1208', '1256,-328', '56,-1480'];
   const notThere = ['264,-296', '-776,-872', '776,-1368']; // attempts that land in rivers
 
-  it('finds exactly the villages that exist in-game', () => {
-    const got = structures(VILLAGE, 6666, true, 1600).filter((p) => Math.hypot(...p.split(',').map(Number)) <= 1600);
+  it.each([28, LATEST_GENERATOR.mc])('finds exactly the villages that exist in-game with generator %i', (mc) => {
+    const got = structures(VILLAGE, 6666, true, 1600, 0, mc).filter((p) => Math.hypot(...p.split(',').map(Number)) <= 1600);
     expect(got.sort()).toEqual([...real].sort());
     for (const v of notThere) expect(got).not.toContain(v);
   });

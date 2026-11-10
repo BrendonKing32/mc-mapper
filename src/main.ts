@@ -4,7 +4,7 @@ import { CHANGELOG } from './data/changelog';
 import { StorageError, createSeedStore, structureKey, type Pin, type SavedSeed } from './storage';
 import { BIOMES } from './data/biomes';
 import { STRUCTURES } from './data/structures';
-import { currentVersionLabel, versionsFor, type Edition } from './data/versions';
+import { currentVersionLabel, LATEST_GENERATOR, versionsFor, type Edition } from './data/versions';
 import { MapView } from './map/map';
 import { readSharedMapState, writeSharedMapState } from './map/share';
 import { parseCoord, toNether, toOverworld } from './portal';
@@ -24,7 +24,7 @@ const dimName = (d: unknown): DimName => (d === 'nether' || d === 'end' ? d : 'o
 function updateVersionNote() {
   const vs = versionsFor(edIn.value as Edition);
   const versionNote = vs.find((v) => v.label === verIn.value)?.approximate
-    ? 'The latest release uses the closest available generator (Minecraft 1.21 Winter Drop); newer terrain or structure changes may not appear.'
+    ? `This release uses the closest available generator (Java ${LATEST_GENERATOR.label}); newer biomes and structures are not supported.`
     : '';
   const bedrockNote = edIn.value === 'bedrock'
     ? "Bedrock Overworld biomes use Java generation; structures use Bedrock's own placement. Spawn, strongholds and ones marked ≈ are approximate, as are Nether and End biomes."
@@ -106,7 +106,7 @@ function activeSeed(list = seeds.list()): SavedSeed | null {
   if (!generated) return null;
   const g = generated;
   const matches = (s: SavedSeed) => s.seed === g.seed && s.edition === g.edition;
-  const exact = (s: SavedSeed) => matches(s) && s.version === g.version;
+  const exact = (s: SavedSeed) => matches(s) && currentVersionLabel(s.version) === g.version;
   return list.find((s) => s.id === activeId && exact(s)) ?? list.find(exact)
     ?? list.find((s) => s.id === activeId && matches(s)) ?? list.find(matches) ?? null;
 }

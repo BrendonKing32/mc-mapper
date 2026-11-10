@@ -7,7 +7,7 @@ if len(sys.argv) <= 1:
     usage: {0} FILE
     Converts a dump of the tree structure inside biomeEntries, obtained with
     the debugger of IntelliJ IDEA, into a C representation. Currently setup
-    the script assumes a tree of order 6, used by 1.19.3 - 1.20.
+    the script assumes a tree of order 6, used by 1.19.3 - 1.21.
     """.format(sys.argv[0])
     print(msg)
     sys.exit(0)
