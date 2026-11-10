@@ -6,6 +6,7 @@ import { BIOMES } from './data/biomes';
 import { STRUCTURES } from './data/structures';
 import { currentVersionLabel, versionsFor, type Edition } from './data/versions';
 import { MapView } from './map/map';
+import { readSharedMapState, writeSharedMapState } from './map/share';
 import { parseCoord, toNether, toOverworld } from './portal';
 import { parseSeed, seedParts } from './seed';
 
@@ -15,6 +16,7 @@ const map = new MapView($('map') as HTMLCanvasElement);
 const seedIn = $<HTMLInputElement>('seed'), edIn = $<HTMLSelectElement>('edition'), verIn = $<HTMLSelectElement>('version');
 const largeIn = $<HTMLInputElement>('large');
 const dimIn = $<HTMLSelectElement>('dimension');
+const initialShare = readSharedMapState(new URLSearchParams(location.search));
 type DimName = 'overworld' | 'nether' | 'end';
 const DIM_OF: Record<DimName, -1 | 0 | 1> = { overworld: 0, nether: -1, end: 1 };
 const dimName = (d: unknown): DimName => (d === 'nether' || d === 'end' ? d : 'overworld');
@@ -45,16 +47,15 @@ fillVersions();
 
 /** Dimension of the world on the map (the select can be changed without regenerating). */
 let shownDim: DimName | null = null;
-function generate(at: { x: number; z: number } | null = null) {
+function generate(at: { x: number; z: number } | null = null, sharedView?: { cx: number; cz: number; zoom: number }) {
   const edition = edIn.value as Edition;
   const mc = versionsFor(edition).find((v) => v.label === verIn.value)!.mc;
   const { lo, hi } = seedParts(parseSeed(seedIn.value));
   saveNotes();
-  generated = { seed: seedIn.value.trim(), edition, version: verIn.value };
+  generated = { seed: seedIn.value.trim(), edition, version: verIn.value, large: largeIn.checked };
   shownDim = dimName(dimIn.value);
-  map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[shownDim], at, edition === 'bedrock');
-  const q = new URLSearchParams({ seed: seedIn.value, edition, version: verIn.value, dimension: dimIn.value });
-  history.replaceState(null, '', `?${q}`);
+  map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[shownDim], at, edition === 'bedrock', sharedView ?? null);
+  updateShareUrl();
   refreshActive();
   refreshPortal();
 }
@@ -90,7 +91,7 @@ function refreshSaved() {
 
 // --- notes + visited structures, kept on the saved seed matching the map ---
 let activeId: string | null = null;
-let generated: { seed: string; edition: Edition; version: string } | null = null;
+let generated: { seed: string; edition: Edition; version: string; large: boolean } | null = null;
 /** The saved seed whose notes are in the textarea, so typed text is never saved onto a different seed. */
 let notesOwner: string | null = null;
 const notesIn = $<HTMLTextAreaElement>('notes');
@@ -162,13 +163,13 @@ function savedRow(s: SavedSeed) {
   };
   return li;
 }
-function load(s: { id?: string; seed: string; edition: Edition; version: string; dimension?: string }) {
+function load(s: { id?: string; seed: string; edition: Edition; version: string; dimension?: string }, sharedView?: { cx: number; cz: number; zoom: number }) {
   saveNotes();
   if (s.id) activeId = s.id;
   seedIn.value = s.seed; edIn.value = s.edition; fillVersions(currentVersionLabel(s.version));
   dimIn.value = dimName(s.dimension);
   updateDimStyling();
-  generate();
+  generate(null, sharedView);
 }
 $('save').onclick = () => {
   if (!seedIn.value.trim()) return;
@@ -321,7 +322,7 @@ refreshPortal();
 
 // --- structure + biome filters ---
 const DEFAULT_ON_KEYS = new Set(['village', 'outpost', 'mansion', 'monument', 'stronghold', 'fortress', 'bastion', 'end_city']);
-const structOn = new Set(STRUCTURES.filter((s) => DEFAULT_ON_KEYS.has(s.key)).map((s) => s.type));
+const structOn = initialShare.structures ?? new Set(STRUCTURES.filter((s) => DEFAULT_ON_KEYS.has(s.key)).map((s) => s.type));
 const structEls: Record<DimName, HTMLElement> = { overworld: $('structsOverworld'), nether: $('structsNether'), end: $('structsEnd') };
 const dimNameOf = (d: -1 | 0 | 1 | undefined): DimName => (d === -1 ? 'nether' : d === 1 ? 'end' : 'overworld');
 const structRows = STRUCTURES.map((s) => {
@@ -333,13 +334,14 @@ const structRows = STRUCTURES.map((s) => {
   l.querySelector('input')!.onchange = (e) => {
     (e.target as HTMLInputElement).checked ? structOn.add(s.type) : structOn.delete(s.type);
     map.setStructures(new Set(structOn));
+    updateShareUrl();
   };
   structEls[dimNameOf(s.dim)].append(l);
   return l;
 });
 map.setStructures(new Set(structOn));
 
-const biomeOn = new Set<number>();
+const biomeOn = initialShare.biomes ?? new Set<number>();
 const biomeEl = $('biomes');
 const biomeEls: Record<DimName, HTMLElement> = { overworld: $('biomesOverworld'), nether: $('biomesNether'), end: $('biomesEnd') };
 const biomeRows = BIOMES.filter((b) => !b.underground).map((b) => {
@@ -347,14 +349,16 @@ const biomeRows = BIOMES.filter((b) => !b.underground).map((b) => {
   l.className = 'opt';
   l.dataset.name = b.name.toLowerCase();
   l.dataset.dim = String(b.dim);
-  l.innerHTML = `<input type="checkbox"><i style="background:rgb(${b.color})"></i>${b.name}`;
+  l.innerHTML = `<input type="checkbox" ${biomeOn.has(b.id) ? 'checked' : ''}><i style="background:rgb(${b.color})"></i>${b.name}`;
   l.querySelector('input')!.onchange = (e) => {
     (e.target as HTMLInputElement).checked ? biomeOn.add(b.id) : biomeOn.delete(b.id);
     map.setBiomeFilter(new Set(biomeOn));
+    updateShareUrl();
   };
   biomeEls[dimNameOf(b.dim)].append(l);
   return l;
 });
+map.setBiomeFilter(new Set(biomeOn));
 $<HTMLInputElement>('biomeSearch').oninput = (e) => {
   const q = (e.target as HTMLInputElement).value.toLowerCase();
   for (const r of biomeRows) r.hidden = !r.dataset.name!.includes(q);
@@ -363,6 +367,7 @@ $('biomeClear').onclick = () => {
   biomeOn.clear();
   biomeEl.querySelectorAll('input').forEach((i) => (i.checked = false));
   map.setBiomeFilter(new Set());
+  updateShareUrl();
 };
 
 function updateDimStyling() {
@@ -500,10 +505,43 @@ $('goto').onsubmit = (e) => {
 $('spawn').onclick = () => map.goToSpawn();
 $('zoomIn').onclick = () => map.zoomBy(2);
 $('zoomOut').onclick = () => map.zoomBy(0.5);
+map.onViewChange = updateShareUrl;
+
+function updateShareUrl() {
+  if (!generated) return;
+  const url = new URL(location.href);
+  const params = new URLSearchParams({
+    seed: generated.seed,
+    edition: generated.edition,
+    version: generated.version,
+    dimension: shownDim ?? 'overworld',
+  });
+  writeSharedMapState(params, {
+    view: map.getView(),
+    structures: structOn,
+    biomes: biomeOn,
+    large: generated.large,
+  });
+  url.search = params.toString();
+  history.replaceState(null, '', url);
+}
+
+const shareStatus = $<HTMLElement>('shareStatus');
+$<HTMLButtonElement>('copyLink').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(location.href);
+    shareStatus.textContent = 'Link copied';
+  } catch {
+    shareStatus.textContent = 'Copy failed; copy the address bar URL.';
+  }
+};
 
 // --- boot: seed from URL, else first saved ---
 refreshSaved();
 const q = new URLSearchParams(location.search);
 // With nothing to show yet, start with the drawer open so the seed box is visible on phones.
 if (!q.get('seed')) setSideOpen(true);
-else load({ seed: q.get('seed')!, edition: (q.get('edition') as Edition) || 'java', version: q.get('version') || '', dimension: q.get('dimension') || '' });
+else {
+  largeIn.checked = initialShare.large ?? false;
+  load({ seed: q.get('seed')!, edition: (q.get('edition') as Edition) || 'java', version: q.get('version') || '', dimension: q.get('dimension') || '' }, initialShare.view);
+}

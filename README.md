@@ -9,6 +9,7 @@ Minecraft seed mapper for Cloudflare Workers (static assets). Enter a seed, get 
 - **Nether portal calculator**: type Overworld or Nether X/Z in the sidebar to get the matching spot in the other dimension (X/Z ÷ 8, rounded down like the game; Y unchanged). **Use map center** fills it from the map, and **Show Overworld / Show Nether** jump the map there. Clicking a structure also offers **Nether portal coords** (or **Overworld portal coords** for Nether structures).
 - **What's new**: the sidebar's **What's new** button lists recent changes from `src/data/changelog.ts`, with a dot when there's something you haven't seen (remembered in `localStorage`). First-time visitors start caught up. When shipping something users will notice, add an entry at the top of that file with a new, unique `id`.
 - **Seed input**: numbers (64-bit signed, both editions) or text (hashed with Java `String.hashCode`, like the game).
+- **Share links**: the address updates with the current map center, zoom, structure and biome filters, and large-biome setting. Use **Copy link** to share the view; opening it restores those settings.
 
 ## Develop
 ```

@@ -38,6 +38,7 @@ export class MapView {
   private structTimer = 0;
   private spawn: { x: number; z: number } | null = null;
   private startAt: { x: number; z: number } | null = null; // where to look once ready, instead of spawn
+  private startView: View | null = null;
   private ready = false; // true once the generator has initialized (spawn itself may be null, e.g. in the Nether)
   private raf = 0;
   private selected: Found | null = null;
@@ -52,6 +53,7 @@ export class MapView {
   /** A block the user chose for a new pin (a tap in pin mode, or a right-click). */
   onPlace: (x: number, z: number) => void = () => {};
   onStatus: (msg: string) => void = () => {};
+  onViewChange: (view: View) => void = () => {};
 
   constructor(private canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
@@ -62,9 +64,10 @@ export class MapView {
     this.resize();
   }
 
-  setWorld(mc: number, lo: number, hi: number, large = false, dim = 0, at: { x: number; z: number } | null = null, bedrock = false) {
+  setWorld(mc: number, lo: number, hi: number, large = false, dim = 0, at: { x: number; z: number } | null = null, bedrock = false, view: View | null = null) {
     this.gen++;
-    this.startAt = at;
+    this.startAt = view ? null : at;
+    this.startView = view;
     this.tiles.clear();
     this.pending.clear();
     this.found = [];
@@ -126,14 +129,12 @@ export class MapView {
   private shown(f: Found) { return this.enabled.has(f.type) && !(this.hideVisited && this.isVisited(f)); }
 
   goTo(x: number, z: number, zoom?: number) {
-    this.cx = x; this.cz = z;
-    if (zoom) this.zoom = zoom;
-    this.queueStructures();
-    this.schedule();
+    this.setView({ cx: x, cz: z, zoom: zoom ?? this.zoom });
   }
 
   /** The block at the middle of the screen. */
   center() { return { x: Math.floor(this.cx), z: Math.floor(this.cz) }; }
+  getView(): View { return this.view; }
 
   goToSpawn() { if (this.spawn) this.goTo(this.spawn.x, this.spawn.z); }
 
@@ -146,7 +147,11 @@ export class MapView {
       this.spawn = m.spawn;
       this.ready = true;
       const at = this.startAt ?? m.spawn;
-      if (at) this.goTo(at.x, at.z);
+      if (this.startView) {
+        const view = this.startView;
+        this.startView = null;
+        this.setView(view);
+      } else if (at) this.goTo(at.x, at.z);
       else { this.queueStructures(); this.schedule(); }
       this.onStatus('');
     } else if (m.op === 'tile') {
@@ -332,6 +337,7 @@ export class MapView {
   private setView(v: View) {
     this.cx = v.cx; this.cz = v.cz; this.zoom = v.zoom;
     this.schedule(); this.queueStructures();
+    this.onViewChange(this.view);
   }
 
   private bindInput() {
