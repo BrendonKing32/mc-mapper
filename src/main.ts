@@ -36,8 +36,9 @@ function generate(at: { x: number; z: number } | null = null) {
   const edition = edIn.value as Edition;
   if (edition === 'bedrock' && !bedrockAckIn.checked) {
     $('status').textContent = 'Acknowledge the Bedrock accuracy warning before generating.';
+    setSideOpen(true);
     bedrockAckIn.focus();
-    return;
+    return false;
   }
   const mc = versionsFor(edition).find((v) => v.label === verIn.value)!.mc;
   const { lo, hi } = seedParts(parseSeed(seedIn.value, edition));
@@ -51,8 +52,9 @@ function generate(at: { x: number; z: number } | null = null) {
   history.replaceState(null, '', `?${q}`);
   refreshActive();
   refreshPortal();
+  return true;
 }
-$('seedForm').onsubmit = (e) => { e.preventDefault(); generate(); setSideOpen(false); };
+$('seedForm').onsubmit = (e) => { e.preventDefault(); if (generate()) setSideOpen(false); };
 dimIn.onchange = () => updateDimStyling();
 
 // --- saved seeds (this browser only) ---
@@ -140,7 +142,7 @@ function savedRow(s: SavedSeed) {
   const visitedLabel = s.visited.length ? ` · ${s.visited.length} visited` : '';
   li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${dimLabel}${visitedLabel}`;
   if (s.notes) li.title = s.notes;
-  li.onclick = () => { load(s); setSideOpen(false); };
+  li.onclick = () => { if (load(s)) setSideOpen(false); };
   const [ren, del] = li.querySelectorAll('button');
   ren.onclick = (e) => {
     e.stopPropagation();
@@ -153,13 +155,13 @@ function savedRow(s: SavedSeed) {
   };
   return li;
 }
-function load(s: { id?: string; seed: string; edition: Edition; version: string; dimension?: string }) {
+function load(s: { id?: string; seed: string; edition: Edition; version: string; dimension?: string }): boolean {
   saveNotes();
   if (s.id) activeId = s.id;
   seedIn.value = s.seed; edIn.value = s.edition; fillVersions(s.version);
   dimIn.value = dimName(s.dimension);
   updateDimStyling();
-  generate();
+  return generate();
 }
 $('save').onclick = () => {
   if (!seedIn.value.trim()) return;
@@ -226,11 +228,13 @@ $('portalCenter').onclick = () => {
 function showPortal(dim: 'overworld' | 'nether') {
   const at = portalTarget(dim);
   if (!at || !generated) return;
-  setSideOpen(false);
-  if (shownDim === dim) return map.goTo(at.x, at.z);
+  if (shownDim === dim) {
+    setSideOpen(false);
+    return map.goTo(at.x, at.z);
+  }
   dimIn.value = dim;
   updateDimStyling();
-  generate(at);
+  if (generate(at)) setSideOpen(false);
 }
 $('showOw').onclick = () => showPortal('overworld');
 $('showNe').onclick = () => showPortal('nether');
@@ -254,8 +258,6 @@ const structRows = STRUCTURES.map((s) => {
   structEls[dimNameOf(s.dim)].append(l);
   return l;
 });
-map.setStructures(new Set(structOn));
-
 let structureMc = versionsFor(edIn.value as Edition).find((v) => v.label === verIn.value)!.mc;
 function availableStructureTypes() {
   return new Set(STRUCTURES.filter((s) => structOn.has(s.type) && isStructureAvailable(s, structureMc)).map((s) => s.type));
@@ -273,6 +275,7 @@ function updateStructureFilters(mc: number, approximate: boolean) {
   }
   map.setStructures(availableStructureTypes());
 }
+updateStructureFilters(structureMc, false);
 
 const biomeOn = new Set<number>();
 const biomeEl = $('biomes');
