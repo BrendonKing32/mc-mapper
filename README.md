@@ -5,9 +5,11 @@ Minecraft seed mapper for Cloudflare Workers (static assets). Enter a seed, get 
 - **Generation** runs in the browser: [cubiomes](https://github.com/Cubitect/cubiomes) (MIT, vendored in `vendor/cubiomes`) compiled to WASM (`public/wasm/cubiomes.wasm`, committed) and run in two Web Workers (tiles / structures).
 - **Saved seeds** live in the browser's `localStorage` (`src/storage.ts`). There is no server, so nobody else can see or change them, but they don't sync between browsers or devices. Use **Export** to download them as JSON and **Import** to load that file elsewhere. If the browser refuses to save (storage full, disabled, private mode), the sidebar shows the reason.
 - **Notes and visited structures** belong to a saved seed: once the seed on the map is saved, the sidebar's **Notes** box saves as you type, and clicking a structure lets you **Mark visited** (shown with a green check; **Hide visited** removes them from the map). They are included in Export/Import.
+- **Pins** also belong to a saved seed: tap the map's 📍 button then the map (or right-click the map) to drop a named pin in the current dimension. Click a pin for its coords, `/tp` command and portal coords, or to rename/remove it; the sidebar's **Pins** list jumps to any of them (switching dimension if needed). They are included in Export/Import.
 - **Nether portal calculator**: type Overworld or Nether X/Z in the sidebar to get the matching spot in the other dimension (X/Z ÷ 8, rounded down like the game; Y unchanged). **Use map center** fills it from the map, and **Show Overworld / Show Nether** jump the map there. Clicking a structure also offers **Nether portal coords** (or **Overworld portal coords** for Nether structures).
 - **What's new**: the sidebar's **What's new** button lists recent changes from `src/data/changelog.ts`, with a dot when there's something you haven't seen (remembered in `localStorage`). First-time visitors start caught up. When shipping something users will notice, add an entry at the top of that file with a new, unique `id`.
-- **Seed input**: numbers (64-bit signed) or text (hashed with Java `String.hashCode`, like the game).
+- **Seed input**: numbers (64-bit signed, both editions) or text (hashed with Java `String.hashCode`, like the game).
+- **Share links**: the address updates with the current map center, zoom, structure and biome filters, and large-biome setting. Use **Copy link** to share the view; opening it restores those settings.
 
 ## Develop
 ```
@@ -24,7 +26,16 @@ npm run deploy          # wrangler deploy (builds first, then uploads dist/ as W
 It's a static site served from Workers static assets (`wrangler.toml`): no Worker script, database or bindings to set up. With Cloudflare Workers Builds connected to the repo, set the **build command** to `npm run build` (Workers Builds ignores `[build]` in `wrangler.toml`, and without it `dist/` doesn't exist), set the **production branch** to `main`, and keep the default deploy commands (`npx wrangler deploy` for `main`, `npx wrangler preview` for other branches; the latter needs the `[previews]` block in `wrangler.toml`).
 
 ## Rebuild the WASM
-`npm run wasm` (downloads wasi-sdk into `.cache/`; no Emscripten needed). Wrapper: `wasm/wrapper.c`.
+`npm run wasm` (downloads wasi-sdk for macOS or Linux, ARM64 or x86-64, into `.cache/`; no Emscripten needed). Set `WASI_SDK_PATH` to use an existing SDK. Wrapper: `wasm/wrapper.c`.
 
-## Bedrock caveat
-cubiomes only implements **Java** generation. The Bedrock option reuses the nearest Java generator and truncates seeds to 32 bits, so Bedrock biomes and especially structure positions are **approximate estimates**, not exact locations. You must acknowledge this before generating a Bedrock map; the map and selected structure details keep the warning visible. Structure filters unavailable in the selected generator version are disabled. Exact Bedrock support needs Bedrock-specific structure salts/spacing and verification against real worlds.
+The vendored MIT-licensed generator is pinned to [mja00/cubiomes at `61db9c3`](https://github.com/mja00/cubiomes/commit/61db9c3c288ab442501afcc767b23016adcb3496), based on [Cubitect/cubiomes at `e61f905`](https://github.com/Cubitect/cubiomes/commit/e61f90580cbdd883214a8054670dacae655e59c0). It adds Java version entries through 26.1.2, the 1.21.5 Pale Garden biome tree, and mansion eligibility in Pale Gardens. These are community updates, not a guarantee of exact terrain or every structure position. The committed WASM must be rebuilt whenever the vendor sources or wrapper change.
+
+## Bedrock
+cubiomes only implements **Java** generation; `wasm/wrapper.c` adds Bedrock on top of it:
+- **Overworld biomes** use the matching Java generator with the full 64-bit seed: since 1.18 the two editions generate the same biomes for the same seed.
+- **Structures** use Bedrock's own placement: a Mersenne Twister seeded per region from the low 32 bits of the seed, with Bedrock's salts and spacing, and a biome check at the structure's own chunk. Constants follow the open-source Bedrock finders [SeedFinder](https://github.com/zebedelu/SeedFinder) and [MCBE-seedcracker](https://github.com/Alist2930/MCBE-seedcracker), which agree on them. `tests/bedrock.test.ts` checks villages against positions confirmed in a real Bedrock world. Trail ruins and trial chambers use Java's placement, as Bedrock does.
+- **Still approximate**: spawn, strongholds, desert wells and End gateways/islands (no Bedrock data, so they show Java's positions; marked ≈ in the filters), Nether and End biomes (generated from the low 32 bits of the seed, which is what Bedrock uses, but the editions' generators differ there), and which Nether regions get a fortress or a bastion (Bedrock's 1-in-3 / 2-in-3 split, but the draw that decides it is inferred).
+
+The version selectors include Java 26.3 and Bedrock 26.52, but these use the Java 26.1.2 generator as an explicit approximation. Generation changes from 26.2 onward, including sulfur caves, Dappled Forest and Abandoned Camps, are not implemented. Bedrock's separate approximations listed above still apply. The old Java `1.21 (Winter Drop)` label in saved seeds and links maps to `1.21.4`; the legacy Bedrock `1.21+` option keeps its original 1.21.4-era generator.
+
+Bedrock generation requires acknowledging that some results remain approximate. The map and selected structure details keep this warning visible, and structures unavailable in the selected generator version are disabled in the filters.

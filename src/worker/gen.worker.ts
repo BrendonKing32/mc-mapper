@@ -4,7 +4,7 @@ const wasmUrl = '/wasm/cubiomes.wasm';
 type Exports = {
   memory: WebAssembly.Memory;
   _initialize?: () => void;
-  mc_init(mc: number, lo: number, hi: number, large: number, dim: number): void;
+  mc_init(mc: number, lo: number, hi: number, large: number, dim: number, bedrock: number): void;
   mc_biomes(x: number, z: number, w: number, h: number, scale: number): number;
   mc_biome_at(x: number, z: number): number;
   mc_structures(type: number, x0: number, z0: number, x1: number, z1: number, out: number, max: number): number;
@@ -57,7 +57,7 @@ function handle(m: any) {
   switch (m.op) {
     case 'init': {
       dim = m.dim ?? 0;
-      ex.mc_init(m.mc, m.lo >>> 0, m.hi >>> 0, m.large ? 1 : 0, dim);
+      ex.mc_init(m.mc, m.lo >>> 0, m.hi >>> 0, m.large ? 1 : 0, dim, m.bedrock ? 1 : 0);
       strongholds = { count: 0, pts: [] };
       let spawn: { x: number; z: number } | null = null;
       if (dim === 0) {

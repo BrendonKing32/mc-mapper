@@ -1,12 +1,16 @@
 // `type` is cubiomes' StructureType; 100 = strongholds (handled specially).
 // `dim` is the dimension the structure generates in (0 = Overworld, -1 = Nether, 1 = End); defaults to 0.
-export type StructureDef = { type: number; key: string; name: string; icon: string; color: string; dim?: -1 | 0 | 1; minMc?: number };
+// `bedrockApprox`: no Bedrock placement data, so Bedrock maps show where Java would put it.
+export type StructureDef = {
+  type: number; key: string; name: string; icon: string; color: string;
+  dim?: -1 | 0 | 1; minMc?: number; bedrockApprox?: true;
+};
 export const STRUCTURES: StructureDef[] = [
   { type: 5, key: 'village', name: 'Village', icon: '🏘️', color: '#c97b2a' },
   { type: 10, key: 'outpost', name: 'Pillager Outpost', icon: '🏴', color: '#7a3b3b', minMc: 17 },
   { type: 9, key: 'mansion', name: 'Woodland Mansion', icon: '🏚️', color: '#5b3a1e', minMc: 14 },
   { type: 8, key: 'monument', name: 'Ocean Monument', icon: '🔱', color: '#2aa9c9', minMc: 11 },
-  { type: 100, key: 'stronghold', name: 'Stronghold', icon: '🏰', color: '#444' },
+  { type: 100, key: 'stronghold', name: 'Stronghold', icon: '🏰', color: '#444', bedrockApprox: true },
   { type: 13, key: 'ancient_city', name: 'Ancient City', icon: '💀', color: '#1a5260', minMc: 23 },
   { type: 24, key: 'trial_chambers', name: 'Trial Chambers', icon: '⚔️', color: '#b8742a', minMc: 26 },
   { type: 23, key: 'trail_ruins', name: 'Trail Ruins', icon: '🏺', color: '#9a7b4f', minMc: 25 },
@@ -22,10 +26,10 @@ export const STRUCTURES: StructureDef[] = [
   { type: 6, key: 'ocean_ruin', name: 'Ocean Ruin', icon: '🐚', color: '#4a7a8a', minMc: 16 },
   { type: 14, key: 'treasure', name: 'Buried Treasure', icon: '💰', color: '#d4af37', minMc: 16 },
   { type: 15, key: 'mineshaft', name: 'Mineshaft', icon: '⛏️', color: '#777' },
-  { type: 16, key: 'desert_well', name: 'Desert Well', icon: '💧', color: '#6aa', minMc: 16 },
+  { type: 16, key: 'desert_well', name: 'Desert Well', icon: '💧', color: '#6aa', minMc: 16, bedrockApprox: true },
   { type: 20, key: 'end_city', name: 'End City', icon: '🏙️', color: '#c9a876', dim: 1, minMc: 12 },
-  { type: 21, key: 'end_gateway', name: 'End Gateway', icon: '🌌', color: '#2bd9c4', dim: 1, minMc: 16 },
-  { type: 22, key: 'end_island', name: 'End Island', icon: '🏝️', color: '#f0f0ff', dim: 1, minMc: 16 },
+  { type: 21, key: 'end_gateway', name: 'End Gateway', icon: '🌌', color: '#2bd9c4', dim: 1, minMc: 16, bedrockApprox: true },
+  { type: 22, key: 'end_island', name: 'End Island', icon: '🏝️', color: '#f0f0ff', dim: 1, minMc: 16, bedrockApprox: true },
 ];
 
 export const isStructureAvailable = (structure: StructureDef, mc: number) => mc >= (structure.minMc ?? 0);

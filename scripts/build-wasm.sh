@@ -2,10 +2,29 @@
 # Builds public/wasm/cubiomes.wasm using wasi-sdk (set WASI_SDK_PATH, or it is downloaded to .cache/).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SDK="${WASI_SDK_PATH:-.cache/wasi-sdk-25.0-x86_64-linux}"
+if [ -n "${WASI_SDK_PATH:-}" ]; then
+  SDK="$WASI_SDK_PATH"
+else
+  case "$(uname -s)" in
+    Darwin) OS=macos ;;
+    Linux) OS=linux ;;
+    *) echo "Unsupported host OS; set WASI_SDK_PATH to an installed wasi-sdk." >&2; exit 1 ;;
+  esac
+  case "$(uname -m)" in
+    arm64|aarch64) ARCH=arm64 ;;
+    x86_64) ARCH=x86_64 ;;
+    *) echo "Unsupported host architecture; set WASI_SDK_PATH to an installed wasi-sdk." >&2; exit 1 ;;
+  esac
+  SDK=".cache/wasi-sdk-25.0-$ARCH-$OS"
+  if [ ! -x "$SDK/bin/clang" ]; then
+    mkdir -p .cache
+    curl --fail --silent --show-error --location \
+      "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-$ARCH-$OS.tar.gz" | tar xz -C .cache
+  fi
+fi
 if [ ! -x "$SDK/bin/clang" ]; then
-  mkdir -p .cache
-  curl -sL https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz | tar xz -C .cache
+  echo "wasi-sdk compiler not found at $SDK/bin/clang." >&2
+  exit 1
 fi
 C=vendor/cubiomes
 mkdir -p public/wasm

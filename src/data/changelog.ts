@@ -6,14 +6,53 @@ export type ChangelogEntry = { id: string; date: string; title: string; items: s
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-09-generator-26-1-2',
+    date: '2026-11-09',
+    title: 'Updated biome generator',
+    items: [
+      'Java versions through 26.1.2 now use updated generation data, including the expanded Pale Gardens and woodland mansions in Pale Gardens from 1.21.5.',
+      'Java 26.3 and Bedrock 26.52 use this newer generator as an approximation; newer biomes and structures are still unsupported.',
+      'Saved seeds and links for older versions keep their original generators; the latest-release approximations use the updated data.',
+    ],
+  },
+  {
+    id: '2026-10-10-current-versions',
+    date: '2026-10-10',
+    title: 'Current Minecraft versions',
+    items: [
+      'Java 26.3 and Bedrock 26.52 are now available in the version selectors.',
+      'Until the generator supports these releases, maps use the closest available 1.21 Winter Drop data and may miss newer terrain or structure changes.',
+    ],
+  },
+  {
     id: '2026-10-08-bedrock-estimates',
     date: '2026-10-08',
     title: 'Clearer Bedrock accuracy warnings',
     items: [
-      'Bedrock generation now requires acknowledging that map and structure results are estimates.',
+      'Bedrock generation now requires acknowledging that some results remain approximate.',
       'Structure filters unavailable in the selected generator version are disabled.',
     ],
   },
+  {
+    id: '2026-10-08-pins',
+    date: '2026-10-08',
+    title: 'Pins',
+    items: [
+      'Drop your own pins on the map: tap the 📍 button and then the map, or right-click the map.',
+      'Pins belong to a saved seed and remember their dimension. Click one for its coords, /tp command and portal coords, or to rename or remove it.',
+      'The Pins section in the sidebar lists them all; click one to jump there. They are included in Export/Import.',
+    ],
+  },
+  {
+    id: '2026-10-08-bedrock-structures',
+    date: '2026-10-08',
+    title: 'Real Bedrock structure positions',
+    items: [
+     "Bedrock maps now place villages, temples, monuments, outposts, mansions, ancient cities, shipwrecks, fortresses, bastions and more where Bedrock does, instead of where Java would.",
+     'Bedrock seeds use all 64 bits like the game does, so large numeric seeds now show the right biomes.',
+     'Structures still approximate on Bedrock (like strongholds) are marked ≈ in the filters.',
+   ],
+ },
   {
     id: '2026-10-08-whats-new',
     date: '2026-10-08',

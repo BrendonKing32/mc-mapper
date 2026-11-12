@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>MC Mapper</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#12161c" />
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -18,13 +22,13 @@
       <label>Dimension <select id="dimension"><option value="overworld">Overworld</option><option value="nether">Nether</option><option value="end">End</option></select></label>
       <label class="check"><input type="checkbox" id="large" /> Large biomes</label>
       <div class="row"><button type="submit">Generate</button><button type="button" id="save" class="alt">Save seed</button></div>
-      <p id="note" class="note" hidden>Bedrock uses the nearest Java generator, so biomes and structure positions are estimates.</p>
-      <label id="bedrockAckWrap" class="check" hidden><input type="checkbox" id="bedrockAck" /> I understand Bedrock results are estimates, not exact locations.</label>
+      <p id="note" class="note" hidden></p>
+      <label id="bedrockAckWrap" class="check" hidden><input type="checkbox" id="bedrockAck" /> I understand some Bedrock results are approximate.</label>
     </form>
     <details open><summary>Saved seeds</summary>
       <p class="hint">Stored in this browser only. Export to back up or move them to another device.</p>
       <p id="savedMsg" class="note" role="status" hidden></p>
-      <ul id="saved"></ul>
+      <ul id="saved" class="list"></ul>
       <div class="row"><button type="button" id="exportSeeds" class="alt">Export</button><button type="button" id="importBtn" class="alt">Import</button></div>
       <input type="file" id="importSeeds" accept="application/json,.json" hidden />
     </details>
@@ -33,6 +37,13 @@
       <div id="notesPanel" hidden>
         <p class="hint">For <b id="notesFor"></b> · <span id="visitedCount"></span></p>
         <textarea id="notes" aria-label="Seed notes" rows="6" maxlength="5000" placeholder="Base coords, portal links, things to come back for…"></textarea>
+      </div>
+    </details>
+    <details open><summary>Pins</summary>
+      <p id="pinsHint" class="hint">Save this seed to drop pins on the map.</p>
+      <div id="pinsPanel" hidden>
+        <p class="hint">Tap 📍 then the map, or right-click the map, to drop a pin.</p>
+        <ul id="pins" class="list"></ul>
       </div>
     </details>
     <details open><summary>Nether portal</summary>
@@ -63,8 +74,9 @@
   <main>
     <canvas id="map"></canvas>
     <button type="button" id="openSide" class="iconBtn" aria-label="Open menu" aria-controls="side" aria-expanded="false">☰</button>
-    <div id="zoomBtns"><button type="button" id="zoomIn" class="iconBtn" aria-label="Zoom in">+</button><button type="button" id="zoomOut" class="iconBtn" aria-label="Zoom out">−</button></div>
-    <div id="hud"><span id="coords">—</span><span id="accuracy" class="note" hidden>Bedrock map and structure results are estimates.</span><span id="status"></span></div>
+    <div id="zoomBtns"><button type="button" id="zoomIn" class="iconBtn" aria-label="Zoom in">+</button><button type="button" id="zoomOut" class="iconBtn" aria-label="Zoom out">−</button><button type="button" id="pinBtn" class="iconBtn" aria-label="Drop a pin" aria-pressed="false" title="Drop a pin (or right-click the map)">📍</button></div>
+    <div id="pinTip" role="status" hidden></div>
+    <div id="hud"><span id="coords">—</span><span id="accuracy" class="note" hidden>Some Bedrock results remain approximate; see the notice and ≈ markers.</span><span id="status"></span><button type="button" id="copyLink" class="alt">Copy link</button><span id="shareStatus" role="status" aria-live="polite"></span></div>
     <form id="goto"><input id="gx" placeholder="X" size="6" aria-label="X" /><input id="gz" placeholder="Z" size="6" aria-label="Z" /><button>Go</button><button type="button" id="spawn" class="alt">Spawn</button></form>
     <div id="pick" hidden></div>
   </main>
