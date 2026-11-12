@@ -23,6 +23,7 @@
       <label class="check"><input type="checkbox" id="large" /> Large biomes</label>
       <div class="row"><button type="submit">Generate</button><button type="button" id="save" class="alt">Save seed</button></div>
       <p id="note" class="note" hidden></p>
+      <label id="bedrockAckWrap" class="check" hidden><input type="checkbox" id="bedrockAck" /> I understand some Bedrock results are approximate.</label>
     </form>
     <details open><summary>Saved seeds</summary>
       <p class="hint">Stored in this browser only. Export to back up or move them to another device.</p>
@@ -75,7 +76,7 @@
     <button type="button" id="openSide" class="iconBtn" aria-label="Open menu" aria-controls="side" aria-expanded="false">☰</button>
     <div id="zoomBtns"><button type="button" id="zoomIn" class="iconBtn" aria-label="Zoom in">+</button><button type="button" id="zoomOut" class="iconBtn" aria-label="Zoom out">−</button><button type="button" id="pinBtn" class="iconBtn" aria-label="Drop a pin" aria-pressed="false" title="Drop a pin (or right-click the map)">📍</button></div>
     <div id="pinTip" role="status" hidden></div>
-    <div id="hud"><span id="coords">—</span><span id="status"></span><button type="button" id="copyLink" class="alt">Copy link</button><span id="shareStatus" role="status" aria-live="polite"></span></div>
+    <div id="hud"><span id="coords">—</span><span id="accuracy" class="note" hidden>Some Bedrock results remain approximate; see the notice and ≈ markers.</span><span id="status"></span><button type="button" id="copyLink" class="alt">Copy link</button><span id="shareStatus" role="status" aria-live="polite"></span></div>
     <form id="goto"><input id="gx" placeholder="X" size="6" aria-label="X" /><input id="gz" placeholder="Z" size="6" aria-label="Z" /><button>Go</button><button type="button" id="spawn" class="alt">Spawn</button></form>
     <div id="pick" hidden></div>
   </main>

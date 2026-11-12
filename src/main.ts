@@ -3,7 +3,7 @@ import { createChangelogSeen } from './changelog';
 import { CHANGELOG } from './data/changelog';
 import { StorageError, createSeedStore, structureKey, type Pin, type SavedSeed } from './storage';
 import { BIOMES } from './data/biomes';
-import { STRUCTURES } from './data/structures';
+import { isStructureAvailable, STRUCTURES } from './data/structures';
 import { currentVersionLabel, LATEST_GENERATOR, versionsFor, type Edition } from './data/versions';
 import { MapView } from './map/map';
 import { readSharedMapState, writeSharedMapState } from './map/share';
@@ -15,6 +15,7 @@ const map = new MapView($('map') as HTMLCanvasElement);
 
 const seedIn = $<HTMLInputElement>('seed'), edIn = $<HTMLSelectElement>('edition'), verIn = $<HTMLSelectElement>('version');
 const largeIn = $<HTMLInputElement>('large');
+const bedrockAckIn = $<HTMLInputElement>('bedrockAck');
 const dimIn = $<HTMLSelectElement>('dimension');
 const initialShare = readSharedMapState(new URLSearchParams(location.search));
 type DimName = 'overworld' | 'nether' | 'end';
@@ -39,27 +40,42 @@ function fillVersions(selected?: string) {
   verIn.innerHTML = vs.map((v) => `<option value="${v.label}">${v.label}</option>`).join('');
   if (selected && vs.some((v) => v.label === selected)) verIn.value = selected;
   updateVersionNote();
-  document.body.dataset.edition = edIn.value;
+  $('bedrockAckWrap').hidden = edIn.value !== 'bedrock';
 }
-edIn.onchange = () => fillVersions();
-verIn.onchange = updateVersionNote;
+edIn.onchange = () => {
+  bedrockAckIn.checked = false;
+  fillVersions();
+};
+verIn.onchange = () => {
+  updateVersionNote();
+};
 fillVersions();
 
 /** Dimension of the world on the map (the select can be changed without regenerating). */
 let shownDim: DimName | null = null;
 function generate(at: { x: number; z: number } | null = null, sharedView?: { cx: number; cz: number; zoom: number }) {
   const edition = edIn.value as Edition;
+  if (edition === 'bedrock' && !bedrockAckIn.checked) {
+    $('status').textContent = 'Acknowledge the Bedrock accuracy warning before generating.';
+    setSideOpen(true);
+    bedrockAckIn.focus();
+    return false;
+  }
   const mc = versionsFor(edition).find((v) => v.label === verIn.value)!.mc;
   const { lo, hi } = seedParts(parseSeed(seedIn.value));
   saveNotes();
   generated = { seed: seedIn.value.trim(), edition, version: verIn.value, large: largeIn.checked };
+  $('accuracy').hidden = edition !== 'bedrock';
+  document.body.dataset.edition = edition;
   shownDim = dimName(dimIn.value);
   map.setWorld(mc, lo, hi, largeIn.checked, DIM_OF[shownDim], at, edition === 'bedrock', sharedView ?? null);
+  updateStructureFilters(mc);
   updateShareUrl();
   refreshActive();
   refreshPortal();
+  return true;
 }
-$('seedForm').onsubmit = (e) => { e.preventDefault(); generate(); setSideOpen(false); };
+$('seedForm').onsubmit = (e) => { e.preventDefault(); if (generate()) setSideOpen(false); };
 dimIn.onchange = () => updateDimStyling();
 
 // --- saved seeds (this browser only) ---
@@ -150,7 +166,7 @@ function savedRow(s: SavedSeed) {
   const pinsLabel = s.pins.length ? ` · ${s.pins.length} pin${s.pins.length === 1 ? '' : 's'}` : '';
   li.querySelector('small')!.textContent = `${s.seed} · ${s.edition} ${s.version}${dimLabel}${visitedLabel}${pinsLabel}`;
   if (s.notes) li.title = s.notes;
-  li.onclick = () => { load(s); setSideOpen(false); };
+  li.onclick = () => { if (load(s)) setSideOpen(false); };
   const [ren, del] = li.querySelectorAll('button');
   ren.onclick = (e) => {
     e.stopPropagation();
@@ -163,13 +179,13 @@ function savedRow(s: SavedSeed) {
   };
   return li;
 }
-function load(s: { id?: string; seed: string; edition: Edition; version: string; dimension?: string }, sharedView?: { cx: number; cz: number; zoom: number }) {
+function load(s: { id?: string; seed: string; edition: Edition; version: string; dimension?: string }, sharedView?: { cx: number; cz: number; zoom: number }): boolean {
   saveNotes();
   if (s.id) activeId = s.id;
   seedIn.value = s.seed; edIn.value = s.edition; fillVersions(currentVersionLabel(s.version));
   dimIn.value = dimName(s.dimension);
   updateDimStyling();
-  generate(null, sharedView);
+  return generate(null, sharedView);
 }
 $('save').onclick = () => {
   if (!seedIn.value.trim()) return;
@@ -310,11 +326,13 @@ $('portalCenter').onclick = () => {
 function showPortal(dim: 'overworld' | 'nether') {
   const at = portalTarget(dim);
   if (!at || !generated) return;
-  setSideOpen(false);
-  if (shownDim === dim) return map.goTo(at.x, at.z);
+  if (shownDim === dim) {
+    setSideOpen(false);
+    return map.goTo(at.x, at.z);
+  }
   dimIn.value = dim;
   updateDimStyling();
-  generate(at);
+  if (generate(at)) setSideOpen(false);
 }
 $('showOw').onclick = () => showPortal('overworld');
 $('showNe').onclick = () => showPortal('nether');
@@ -330,16 +348,34 @@ const structRows = STRUCTURES.map((s) => {
   l.className = 'opt';
   l.dataset.dim = String(s.dim ?? 0);
   if (s.bedrockApprox) l.dataset.approx = '';
-  l.innerHTML = `<input type="checkbox" ${structOn.has(s.type) ? 'checked' : ''}><i style="background:${s.color}"></i>${s.icon} ${s.name}`;
+  l.innerHTML = `<input type="checkbox"><i style="background:${s.color}"></i><span></span>`;
+  l.querySelector('span')!.textContent = `${s.icon} ${s.name}`;
   l.querySelector('input')!.onchange = (e) => {
     (e.target as HTMLInputElement).checked ? structOn.add(s.type) : structOn.delete(s.type);
-    map.setStructures(new Set(structOn));
+    map.setStructures(availableStructureTypes());
     updateShareUrl();
   };
   structEls[dimNameOf(s.dim)].append(l);
   return l;
 });
-map.setStructures(new Set(structOn));
+let structureMc = versionsFor(edIn.value as Edition).find((v) => v.label === verIn.value)!.mc;
+function availableStructureTypes() {
+  return new Set(STRUCTURES.filter((s) => structOn.has(s.type) && isStructureAvailable(s, structureMc)).map((s) => s.type));
+}
+function updateStructureFilters(mc: number) {
+  structureMc = mc;
+  for (const [index, s] of STRUCTURES.entries()) {
+    const row = structRows[index];
+    const input = row.querySelector('input')!;
+    const available = isStructureAvailable(s, mc);
+    input.disabled = !available;
+    input.checked = available && structOn.has(s.type);
+    row.querySelector('span')!.textContent = `${s.icon} ${s.name}`;
+    row.title = available ? '' : `${s.name} is unavailable in the selected generator version.`;
+  }
+  map.setStructures(availableStructureTypes());
+}
+updateStructureFilters(structureMc);
 
 const biomeOn = initialShare.biomes ?? new Set<number>();
 const biomeEl = $('biomes');
@@ -440,6 +476,8 @@ function renderPick(saved = activeSeed()) {
   if (!f) return;
   const def = STRUCTURES.find((s) => s.type === f.type)!;
   el.innerHTML = `<b>${def.icon} ${def.name}</b><br>X ${f.x}, Z ${f.z}<br><code>/tp @s ${f.x} ~ ${f.z}</code>`;
+  if (generated?.edition === 'bedrock')
+    el.insertAdjacentHTML('beforeend', '<p class="note">Some Bedrock results remain approximate. Verify in-game before relying on these coordinates.</p>');
   if (def.dim !== 1) el.append(portalPick(structureKey(f.type, f.x, f.z), f, def.dim === -1 ? 'nether' : 'overworld'));
   if (!saved) {
     el.insertAdjacentHTML('beforeend', '<p class="hint">Save this seed to mark structures visited.</p>');
